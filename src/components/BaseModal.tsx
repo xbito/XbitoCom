@@ -1,17 +1,22 @@
 import React, { useState } from 'react';
-import { X, Building2, Zap, Plus, ChevronUp, MapPin } from 'lucide-react';
+import { X, Building2, Zap, Plus, ChevronUp, MapPin, Plane, Users } from 'lucide-react';
 import type { Base, Facility, Continent } from '../types';
 import { FACILITY_TYPES } from '../data/facilities';
 
 interface BaseModalProps {
   onClose: () => void;
-  onCreate: (base: Base) => void;
+  onCreate?: (base: Base) => void;
   onUpgrade?: (baseId: string, facilityId: string) => void;
   onAddFacility?: (baseId: string, facilityType: string) => void;
+  onOpenHangar?: (base: Base) => void;
   existingBase?: Base | null;
-  availablePersonnel: number;
-  availableFunds: number;
+  availablePersonnel?: number;
+  availableFunds?: number;
   selectedContinent?: Continent | null;
+  isOpen?: boolean;
+  width?: string;
+  title?: string;
+  children?: React.ReactNode;
 }
 
 const BaseModal: React.FC<BaseModalProps> = ({
@@ -19,22 +24,107 @@ const BaseModal: React.FC<BaseModalProps> = ({
   onCreate,
   onUpgrade,
   onAddFacility,
+  onOpenHangar,
   existingBase,
-  availablePersonnel,
-  availableFunds,
+  availablePersonnel = 0,
+  availableFunds = 0,
   selectedContinent,
+  isOpen = true,
+  width = 'md',
+  title,
+  children
 }) => {
+  // If component is not open, don't render anything
+  if (!isOpen) return null;
+
+  // If this is being used as a generic modal with children
+  if (children) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+        <div className={`bg-slate-800 rounded-lg p-6 ${
+          width === 'sm' ? 'w-[400px]' :
+          width === 'md' ? 'w-[600px]' :
+          width === 'lg' ? 'w-[800px]' :
+          width === 'xl' ? 'w-[1000px]' :
+          'w-[600px]'
+        } max-h-[80vh] overflow-y-auto`}>
+          {title && (
+            <div className="flex justify-between items-center mb-6">
+              <h2 className="text-2xl font-bold">{title}</h2>
+              <button
+                onClick={onClose}
+                className="text-slate-400 hover:text-white"
+              >
+                <X size={24} />
+              </button>
+            </div>
+          )}
+          {children}
+        </div>
+      </div>
+    );
+  }
+
+  // Base creation/management UI code
   const [name, setName] = useState(existingBase?.name || '');
-  const [personnel, setPersonnel] = useState(existingBase?.personnel?.length || 20);
   const [showFacilitySelect, setShowFacilitySelect] = useState(false);
   const [facilities, setFacilities] = useState(existingBase?.facilities || []);
 
   const baseCost = 2000000; // $2M for a new base
 
+  // Calculate personnel capacity based on facilities
+  const calculatePersonnelCapacity = (baseOrFacilities: Base | Facility[]) => {
+    const facilitiesList = 'facilities' in baseOrFacilities 
+      ? baseOrFacilities.facilities 
+      : baseOrFacilities;
+    
+    return facilitiesList.reduce((total, facility) => {
+      const facilityType = FACILITY_TYPES[facility.type];
+      // Base personnel capacity is base value times level
+      return total + (facilityType.basePersonnel * facility.level);
+    }, 0);
+  };
+  
+  // Calculate continent personnel bonus
+  const getPersonnelMultiplier = () => {
+    return selectedContinent?.personnelMultiplier || 1;
+  };
+
+  // Calculate total personnel capacity with continental bonus
+  const getTotalPersonnelCapacity = (baseOrFacilities: Base | Facility[]) => {
+    const baseCapacity = calculatePersonnelCapacity(baseOrFacilities);
+    return Math.round(baseCapacity * getPersonnelMultiplier());
+  };
+
+  // For new bases, calculate initial personnel capacity
+  const getInitialPersonnelCapacity = () => {
+    // Initial facilities: powerPlant, barracks, radar
+    const initialFacilities = [
+      {
+        type: 'powerPlant',
+        level: 1
+      },
+      {
+        type: 'barracks',
+        level: 1
+      },
+      {
+        type: 'radar',
+        level: 1
+      }
+    ];
+    
+    const baseCapacity = initialFacilities.reduce((total, facility) => {
+      return total + FACILITY_TYPES[facility.type].basePersonnel;
+    }, 0);
+    
+    return Math.round(baseCapacity * getPersonnelMultiplier());
+  };
+
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     
-    if (!name || personnel <= 0 || !selectedContinent) return;
+    if (!name || !selectedContinent || !onCreate) return;
     
     const newBase: Base = {
       id: existingBase?.id || crypto.randomUUID(),
@@ -42,7 +132,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
       x: Math.random() * 100, // Random position within the continent
       y: Math.random() * 100, // Random position within the continent
       level: 1,
-      personnel: [],
+      personnel: [], // Personnel will be assigned later by the user from Personnel modal
       power: 0,
       powerUsage: 0,
       continent: selectedContinent,
@@ -58,6 +148,14 @@ const BaseModal: React.FC<BaseModalProps> = ({
         },
         {
           id: crypto.randomUUID(),
+          type: 'barracks',
+          level: 1,
+          personnel: [],
+          powerUsage: FACILITY_TYPES.barracks.basePowerUsage,
+          maintenance: FACILITY_TYPES.barracks.baseMaintenance,
+        },
+        {
+          id: crypto.randomUUID(),
           type: 'radar',
           level: 1,
           personnel: [],
@@ -68,6 +166,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
       vehicles: [],
       radarRange: 100, // Default radar range
       radarEffectiveness: 50, // Default radar effectiveness
+      personnelCapacity: getInitialPersonnelCapacity(),
     };
 
     onCreate(newBase);
@@ -78,10 +177,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
     return Math.floor(facilityType.baseCost * Math.pow(facilityType.upgradeMultiplier, facility.level));
   };
 
-  const canCreate = name && 
-    personnel <= availablePersonnel && 
-    personnel > 0 && 
-    (!existingBase && availableFunds >= baseCost);
+  const canCreate = name && (!existingBase && availableFunds >= baseCost);
 
   const getAvailableFacilities = () => {
     if (!existingBase) return [];
@@ -166,6 +262,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
               </div>
               {(() => {
                 const status = calculatePowerStatus(existingBase);
+                
                 return (
                   <div className="grid grid-cols-3 gap-4 text-center">
                     <div>
@@ -203,6 +300,31 @@ const BaseModal: React.FC<BaseModalProps> = ({
                 </span>
               </div>
             </div>
+
+            <div className="mb-4 bg-slate-700 p-4 rounded-lg">
+              <div className="flex items-center gap-2 mb-2">
+                <Users className="text-blue-400" size={20} />
+                <h3 className="font-semibold">Personnel Status</h3>
+              </div>
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div>
+                  <p className="text-sm text-slate-400">Capacity</p>
+                  <p className="text-lg font-bold">
+                    {existingBase.personnelCapacity || getTotalPersonnelCapacity(existingBase)}
+                  </p>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-400">Assigned</p>
+                  <p className="text-lg font-bold">{existingBase.personnel?.length || 0}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-400">Available</p>
+                  <p className="text-lg font-bold">
+                    {(existingBase.personnelCapacity || getTotalPersonnelCapacity(existingBase)) - (existingBase.personnel?.length || 0)}
+                  </p>
+                </div>
+              </div>
+            </div>
           </>
         )}
 
@@ -222,17 +344,19 @@ const BaseModal: React.FC<BaseModalProps> = ({
                 </div>
 
                 <div>
-                  <label className="block text-sm font-medium mb-1">Personnel</label>
-                  <input
-                    type="number"
-                    value={personnel}
-                    onChange={(e) => setPersonnel(parseInt(e.target.value, 10))}
-                    className="w-full bg-slate-700 rounded px-3 py-2 text-white"
-                    min="1"
-                    max={availablePersonnel}
-                  />
+                  <label className="block text-sm font-medium mb-1">Personnel Capacity</label>
+                  <div className="flex items-center gap-2">
+                    <div className="bg-slate-700 rounded px-3 py-2 text-white w-full">
+                      <div className="flex justify-between">
+                        <span>{getInitialPersonnelCapacity()} personnel</span>
+                        <span className="text-slate-400 text-xs">
+                          Based on initial facilities & location
+                        </span>
+                      </div>
+                    </div>
+                  </div>
                   <p className="text-sm text-slate-400 mt-1">
-                    Available: {availablePersonnel}
+                    Total available personnel: {availablePersonnel}
                   </p>
                 </div>
 
@@ -315,22 +439,34 @@ const BaseModal: React.FC<BaseModalProps> = ({
                           <p className="text-sm text-slate-400">Level {facility.level}</p>
                           <div className="flex gap-4 mt-1 text-sm">
                             <span className="text-yellow-400">Power: {facility.powerUsage}</span>
-                            <span className="text-blue-400">Personnel: {facility.personnel?.length ?? 0}</span>
+                            <span className="text-blue-400">Personnel: {facility.personnel?.length ?? 0}/{facilityType?.basePersonnel * facility.level}</span>
                             <span className="text-purple-400">Size: {facilityType?.size ?? 0}</span>
                           </div>
                         </div>
-                        <button
-                          type="button"
-                          onClick={() => onUpgrade?.(existingBase?.id ?? '', facility.id)}
-                          disabled={(availableFunds ?? 0) < (upgradeCost ?? 0)}
-                          className="bg-green-500 hover:bg-green-600 disabled:bg-slate-600 disabled:cursor-not-allowed text-white px-3 py-2 rounded flex items-center gap-2"
-                        >
-                          <ChevronUp size={16} />
-                          <div>
-                            <div>Upgrade</div>
-                            <div className="text-xs">${(upgradeCost ?? 0).toLocaleString()}</div>
-                          </div>
-                        </button>
+                        <div className="flex items-center gap-2">
+                          {facility.type === 'hangar' && (
+                            <button
+                              type="button"
+                              onClick={() => onOpenHangar?.(existingBase)}
+                              className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded flex items-center gap-2"
+                            >
+                              <Plane size={16} />
+                              <span>Manage</span>
+                            </button>
+                          )}
+                          <button
+                            type="button"
+                            onClick={() => onUpgrade?.(existingBase?.id ?? '', facility.id)}
+                            disabled={(availableFunds ?? 0) < (upgradeCost ?? 0)}
+                            className="bg-green-500 hover:bg-green-600 disabled:bg-slate-600 disabled:cursor-not-allowed text-white px-3 py-2 rounded flex items-center gap-2"
+                          >
+                            <ChevronUp size={16} />
+                            <div>
+                              <div>Upgrade</div>
+                              <div className="text-xs">${(upgradeCost ?? 0).toLocaleString()}</div>
+                            </div>
+                          </button>
+                        </div>
                       </div>
                     );
                   })}

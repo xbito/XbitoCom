@@ -243,6 +243,29 @@ export const VEHICLE_TYPES: Record<string, {
   // Scout variants
   "scout-basic": {
     type: 'scout',
+    name: 'A-12X Scout',
+    description: 'Standard reconnaissance aircraft for initial UFO detection missions',
+    baseCost: 1500000,
+    baseStats: {
+      speed: 75,
+      armor: 25,
+      firepower: 0,
+      range: 70,
+      capacity: 2,
+    },
+    crewRequirements: {
+      pilot: 1,
+    },
+    hardpoints: 1,
+    componentSlots: 4,
+    maintenanceCost: 45000,
+    fuelCost: 8000,
+    size: 2,
+    defaultWeapons: [],
+    defaultComponents: ['basicEngine', 'basicArmor', 'basicRadar', 'basicNavigation']
+  },
+  "scout-stealth": {
+    type: 'scout',
     name: 'SR-71X Shadowhawk',
     description: 'High-altitude reconnaissance aircraft for UFO detection',
     baseCost: 2500000,
@@ -261,6 +284,7 @@ export const VEHICLE_TYPES: Record<string, {
     maintenanceCost: 60000,
     fuelCost: 12000,
     size: 2,
+    variant: 'stealth',
     researchRequired: ['stealth-systems'],
     defaultWeapons: [],
     defaultComponents: ['advancedEngine', 'basicArmor', 'basicRadar', 'basicNavigation', 'basicStealth']

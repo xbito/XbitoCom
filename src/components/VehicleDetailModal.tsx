@@ -12,6 +12,7 @@ import {
 } from '../data/vehicles';
 import { assignPilotToVehicle, removePilotFromVehicle } from '../data/personnel';
 import BaseModal from './BaseModal';
+import { Shield, Wrench, Plane, Navigation, Users, Target, Cpu, ArrowUpCircle, DollarSign } from 'lucide-react';
 
 interface VehicleDetailModalProps {
   isOpen: boolean;
@@ -211,33 +212,53 @@ const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
     >
       <div className="flex flex-col h-full">
         {/* Tabs Navigation */}
-        <div className="flex border-b">
+        <div className="flex border-b border-slate-700 mb-4">
           <button
-            className={`px-4 py-2 ${activeTab === 'info' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+            className={`px-4 py-2 rounded-t-lg ${
+              activeTab === 'info' 
+                ? 'bg-blue-500 text-white' 
+                : 'text-slate-400 hover:text-white hover:bg-slate-700'
+            }`}
             onClick={() => setActiveTab('info')}
           >
             Info
           </button>
           <button
-            className={`px-4 py-2 ${activeTab === 'crew' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+            className={`px-4 py-2 rounded-t-lg ${
+              activeTab === 'crew' 
+                ? 'bg-blue-500 text-white' 
+                : 'text-slate-400 hover:text-white hover:bg-slate-700'
+            }`}
             onClick={() => setActiveTab('crew')}
           >
             Crew
           </button>
           <button
-            className={`px-4 py-2 ${activeTab === 'weapons' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+            className={`px-4 py-2 rounded-t-lg ${
+              activeTab === 'weapons' 
+                ? 'bg-blue-500 text-white' 
+                : 'text-slate-400 hover:text-white hover:bg-slate-700'
+            }`}
             onClick={() => setActiveTab('weapons')}
           >
             Weapons
           </button>
           <button
-            className={`px-4 py-2 ${activeTab === 'components' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+            className={`px-4 py-2 rounded-t-lg ${
+              activeTab === 'components' 
+                ? 'bg-blue-500 text-white' 
+                : 'text-slate-400 hover:text-white hover:bg-slate-700'
+            }`}
             onClick={() => setActiveTab('components')}
           >
             Components
           </button>
           <button
-            className={`px-4 py-2 ${activeTab === 'upgrades' ? 'bg-blue-500 text-white' : 'bg-gray-200'}`}
+            className={`px-4 py-2 rounded-t-lg ${
+              activeTab === 'upgrades' 
+                ? 'bg-blue-500 text-white' 
+                : 'text-slate-400 hover:text-white hover:bg-slate-700'
+            }`}
             onClick={() => setActiveTab('upgrades')}
           >
             Upgrades
@@ -245,108 +266,121 @@ const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
         </div>
         
         {/* Content area */}
-        <div className="flex-grow overflow-y-auto p-4">
+        <div className="flex-grow overflow-y-auto">
           {/* Info Tab */}
           {activeTab === 'info' && (
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               {/* Left column */}
               <div>
-                <div className="mb-4">
-                  <h3 className="font-bold text-lg">Vehicle Information</h3>
-                  <div className="grid grid-cols-2 gap-2 mt-2">
-                    <div className="text-gray-600">Type:</div>
-                    <div className="font-medium capitalize">{vehicle.type}</div>
+                <div className="bg-slate-700 p-4 rounded-lg mb-4">
+                  <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
+                    <Plane className="text-blue-400" size={20} />
+                    Vehicle Information
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="text-slate-400">Type:</div>
+                    <div className="text-slate-200 font-medium capitalize">{vehicle.type}</div>
                     
-                    <div className="text-gray-600">Status:</div>
-                    <div className="font-medium capitalize">{vehicle.status}</div>
+                    <div className="text-slate-400">Status:</div>
+                    <div className="text-slate-200 font-medium capitalize">{vehicle.status}</div>
                     
-                    <div className="text-gray-600">Condition:</div>
-                    <div className="font-medium">
+                    <div className="text-slate-400">Condition:</div>
+                    <div className="text-slate-200 font-medium">
                       {vehicle.condition}%
-                      <div className="w-full bg-gray-300 rounded-full h-2 mt-1">
+                      <div className="w-full bg-slate-800 rounded-full h-2 mt-1">
                         <div 
                           className={`${
                             vehicle.condition < 30 ? 'bg-red-500' : 
                             vehicle.condition < 70 ? 'bg-yellow-500' : 
                             'bg-green-500'
-                          } h-2 rounded-full`} 
+                          } h-2 rounded-full transition-all duration-300`} 
                           style={{ width: `${vehicle.condition}%` }}
                         ></div>
                       </div>
                     </div>
                     
-                    <div className="text-gray-600">Crew Size:</div>
-                    <div className="font-medium">{vehicle.crew.length}</div>
+                    <div className="text-slate-400">Crew Size:</div>
+                    <div className="text-slate-200 font-medium">{vehicle.crew.length}</div>
                     
-                    <div className="text-gray-600">Weapons:</div>
-                    <div className="font-medium">{vehicle.weapons.length}/{vehicle.hardpoints}</div>
+                    <div className="text-slate-400">Weapons:</div>
+                    <div className="text-slate-200 font-medium">{vehicle.weapons.length}/{vehicle.hardpoints}</div>
                     
-                    <div className="text-gray-600">Components:</div>
-                    <div className="font-medium">{vehicle.components.length}/{vehicle.componentSlots}</div>
+                    <div className="text-slate-400">Components:</div>
+                    <div className="text-slate-200 font-medium">{vehicle.components.length}/{vehicle.componentSlots}</div>
                   </div>
                 </div>
                 
-                <div>
-                  <h3 className="font-bold text-lg">Maintenance</h3>
-                  <div className="grid grid-cols-2 gap-2 mt-2">
-                    <div className="text-gray-600">Monthly Cost:</div>
-                    <div className="font-medium">${vehicle.maintenance.toLocaleString()}</div>
+                <div className="bg-slate-700 p-4 rounded-lg">
+                  <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
+                    <DollarSign className="text-green-400" size={20} />
+                    Maintenance
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="text-slate-400">Monthly Cost:</div>
+                    <div className="text-slate-200 font-medium">${vehicle.maintenance.toLocaleString()}</div>
                     
-                    <div className="text-gray-600">Fuel Cost:</div>
-                    <div className="font-medium">${vehicle.fuelCost.toLocaleString()}</div>
+                    <div className="text-slate-400">Fuel Cost:</div>
+                    <div className="text-slate-200 font-medium">${vehicle.fuelCost.toLocaleString()}</div>
                   </div>
                 </div>
               </div>
               
               {/* Right column */}
               <div>
-                <div className="mb-4">
-                  <h3 className="font-bold text-lg">Vehicle Stats</h3>
-                  <div className="grid grid-cols-2 gap-2 mt-2">
-                    <div className="text-gray-600">Speed:</div>
-                    <div className="font-medium">
+                <div className="bg-slate-700 p-4 rounded-lg mb-4">
+                  <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
+                    <Shield className="text-blue-400" size={20} />
+                    Vehicle Stats
+                  </h3>
+                  <div className="grid grid-cols-2 gap-2">
+                    <div className="text-slate-400">Speed:</div>
+                    <div className="text-slate-200 font-medium">
                       {vehicle.stats.speed} 
-                      <span className="text-xs text-gray-500 ml-2">
+                      <span className="text-xs text-slate-400 ml-2">
                         (x{performanceModifiers.speedModifier.toFixed(2)})
                       </span>
                     </div>
                     
-                    <div className="text-gray-600">Armor:</div>
-                    <div className="font-medium">{vehicle.stats.armor}</div>
+                    <div className="text-slate-400">Armor:</div>
+                    <div className="text-slate-200 font-medium">{vehicle.stats.armor}</div>
                     
-                    <div className="text-gray-600">Firepower:</div>
-                    <div className="font-medium">
+                    <div className="text-slate-400">Firepower:</div>
+                    <div className="text-slate-200 font-medium">
                       {vehicle.stats.firepower}
-                      <span className="text-xs text-gray-500 ml-2">
+                      <span className="text-xs text-slate-400 ml-2">
                         (x{performanceModifiers.firepowerModifier.toFixed(2)})
                       </span>
                     </div>
                     
-                    <div className="text-gray-600">Range:</div>
-                    <div className="font-medium">
+                    <div className="text-slate-400">Range:</div>
+                    <div className="text-slate-200 font-medium">
                       {vehicle.stats.range}
-                      <span className="text-xs text-gray-500 ml-2">
+                      <span className="text-xs text-slate-400 ml-2">
                         (x{performanceModifiers.rangeModifier.toFixed(2)})
                       </span>
                     </div>
                     
-                    <div className="text-gray-600">Capacity:</div>
-                    <div className="font-medium">{vehicle.stats.capacity}</div>
+                    <div className="text-slate-400">Capacity:</div>
+                    <div className="text-slate-200 font-medium">{vehicle.stats.capacity}</div>
                   </div>
                 </div>
                 
-                <div>
-                  <h3 className="font-bold text-lg">Actions</h3>
-                  <div className="grid grid-cols-1 gap-2 mt-2">
+                <div className="bg-slate-700 p-4 rounded-lg">
+                  <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
+                    <Wrench className="text-yellow-400" size={20} />
+                    Actions
+                  </h3>
+                  <div className="grid grid-cols-1 gap-2">
                     <button
                       disabled={!needsReload || reloadCost > availableFunds || vehicle.status !== 'ready'}
                       onClick={handleReloadWeapons}
-                      className={`w-full py-2 rounded ${
+                      className={`w-full py-2 rounded flex items-center justify-center gap-2 ${
                         !needsReload || reloadCost > availableFunds || vehicle.status !== 'ready'
-                          ? 'bg-gray-300 cursor-not-allowed'
+                          ? 'bg-slate-600 cursor-not-allowed'
                           : 'bg-blue-500 text-white hover:bg-blue-600'
                       }`}
                     >
+                      <DollarSign size={16} />
                       {!needsReload 
                         ? 'All Weapons Loaded' 
                         : `Reload Weapons ($${reloadCost.toLocaleString()})`}
@@ -363,19 +397,22 @@ const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
           {activeTab === 'crew' && (
             <div className="space-y-6">
               {/* Current crew */}
-              <div>
-                <h3 className="font-bold text-lg mb-2">Current Crew</h3>
+              <div className="bg-slate-700 p-4 rounded-lg">
+                <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
+                  <Users className="text-blue-400" size={20} />
+                  Current Crew
+                </h3>
                 {vehicle.crew.length > 0 ? (
                   <div className="space-y-2">
                     {vehicle.crew.map(personnel => (
-                      <div key={personnel.id} className="border rounded p-3 flex justify-between items-center">
+                      <div key={personnel.id} className="bg-slate-800 rounded-lg p-3 flex justify-between items-center">
                         <div>
-                          <div className="font-medium">{personnel.name}</div>
-                          <div className="text-sm text-gray-600 capitalize">
+                          <div className="font-medium text-slate-200">{personnel.name}</div>
+                          <div className="text-sm text-slate-400 capitalize">
                             {personnel.role} - Experience: {personnel.experience}
                           </div>
                           {personnel.role === 'pilot' && personnel.vehicleSpecialization && (
-                            <div className="text-xs text-blue-600">
+                            <div className="text-xs text-blue-400">
                               {personnel.vehicleSpecialization.vehicleType === vehicle.type && (
                                 <span>
                                   Specialized in this vehicle ({personnel.vehicleSpecialization.proficiency}% proficiency)
@@ -395,24 +432,27 @@ const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
                     ))}
                   </div>
                 ) : (
-                  <p className="text-gray-500">No crew assigned to this vehicle.</p>
+                  <p className="text-slate-400">No crew assigned to this vehicle.</p>
                 )}
               </div>
               
               {/* Available personnel */}
-              <div>
-                <h3 className="font-bold text-lg mb-2">Available Personnel</h3>
+              <div className="bg-slate-700 p-4 rounded-lg">
+                <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
+                  <Users className="text-green-400" size={20} />
+                  Available Personnel
+                </h3>
                 {availablePersonnel.length > 0 ? (
                   <div className="space-y-2">
                     {availablePersonnel.map(personnel => (
-                      <div key={personnel.id} className="border rounded p-3 flex justify-between items-center">
+                      <div key={personnel.id} className="bg-slate-800 rounded-lg p-3 flex justify-between items-center">
                         <div>
-                          <div className="font-medium">{personnel.name}</div>
-                          <div className="text-sm text-gray-600 capitalize">
+                          <div className="font-medium text-slate-200">{personnel.name}</div>
+                          <div className="text-sm text-slate-400 capitalize">
                             {personnel.role} - Experience: {personnel.experience}
                           </div>
                           {personnel.role === 'pilot' && (
-                            <div className="grid grid-cols-2 gap-x-4 mt-1 text-xs">
+                            <div className="grid grid-cols-2 gap-x-4 mt-1 text-xs text-slate-300">
                               <div>Piloting: {personnel.skills.piloting}</div>
                               {personnel.pilotAttributes && (
                                 <>
@@ -435,7 +475,7 @@ const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
                     ))}
                   </div>
                 ) : (
-                  <p className="text-gray-500">No available personnel to assign.</p>
+                  <p className="text-slate-400">No available personnel to assign.</p>
                 )}
               </div>
             </div>
@@ -445,39 +485,42 @@ const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
           {activeTab === 'weapons' && (
             <div className="space-y-6">
               {/* Current weapons */}
-              <div>
-                <div className="flex justify-between items-center">
-                  <h3 className="font-bold text-lg">Current Weapons</h3>
-                  <span className="text-sm">
+              <div className="bg-slate-700 p-4 rounded-lg">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="font-bold text-lg flex items-center gap-2">
+                    <Target className="text-red-400" size={20} />
+                    Current Weapons
+                  </h3>
+                  <span className="text-sm bg-slate-600 px-2 py-1 rounded">
                     {vehicle.weapons.length}/{vehicle.hardpoints} Hardpoints Used
                   </span>
                 </div>
                 
                 {vehicle.weapons.length > 0 ? (
-                  <div className="space-y-2 mt-2">
+                  <div className="space-y-2">
                     {vehicle.weapons.map(weapon => (
-                      <div key={weapon.id} className="border rounded p-3">
+                      <div key={weapon.id} className="bg-slate-800 rounded-lg p-3">
                         <div className="flex justify-between">
-                          <div className="font-medium">{weapon.name}</div>
-                          <div className="text-sm bg-gray-200 px-2 py-0.5 rounded capitalize">
+                          <div className="font-medium text-slate-200">{weapon.name}</div>
+                          <div className="text-sm bg-slate-700 px-2 py-0.5 rounded capitalize">
                             {getWeaponTypeName(weapon.type)}
                           </div>
                         </div>
                         
                         <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2 text-sm">
-                          <div><span className="text-gray-600">Damage:</span> {weapon.damage}</div>
-                          <div><span className="text-gray-600">Accuracy:</span> {weapon.accuracy}%</div>
-                          <div><span className="text-gray-600">Range:</span> {weapon.range}</div>
-                          <div><span className="text-gray-600">Weight:</span> {weapon.weight}</div>
+                          <div><span className="text-slate-400">Damage:</span> <span className="text-slate-200">{weapon.damage}</span></div>
+                          <div><span className="text-slate-400">Accuracy:</span> <span className="text-slate-200">{weapon.accuracy}%</span></div>
+                          <div><span className="text-slate-400">Range:</span> <span className="text-slate-200">{weapon.range}</span></div>
+                          <div><span className="text-slate-400">Weight:</span> <span className="text-slate-200">{weapon.weight}</span></div>
                         </div>
                         
                         {/* Ammo status */}
                         <div className="mt-2">
                           <div className="flex justify-between text-sm">
-                            <span>Ammo</span>
-                            <span>{weapon.currentAmmo}/{weapon.ammoCapacity}</span>
+                            <span className="text-slate-400">Ammo</span>
+                            <span className="text-slate-200">{weapon.currentAmmo}/{weapon.ammoCapacity}</span>
                           </div>
-                          <div className="w-full bg-gray-300 rounded-full h-2 mt-1">
+                          <div className="w-full bg-slate-900 rounded-full h-2 mt-1">
                             <div 
                               className="bg-blue-500 h-2 rounded-full" 
                               style={{ width: `${(weapon.currentAmmo / weapon.ammoCapacity) * 100}%` }}
@@ -488,31 +531,31 @@ const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
                         {/* Additional weapon properties */}
                         <div className="flex gap-2 mt-2 text-xs">
                           {weapon.armorPiercing && (
-                            <span className="bg-yellow-100 px-2 py-0.5 rounded">
+                            <span className="bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded">
                               Armor Piercing: {weapon.armorPiercing}%
                             </span>
                           )}
                           {weapon.explosiveRadius && (
-                            <span className="bg-red-100 px-2 py-0.5 rounded">
+                            <span className="bg-red-500/20 text-red-400 px-2 py-0.5 rounded">
                               Explosive Radius: {weapon.explosiveRadius}
                             </span>
                           )}
                         </div>
-                        
-                        {/* Remove weapon button would be here */}
-                        {/* For now we'll implement this in a future phase */}
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-gray-500 mt-2">No weapons installed on this vehicle.</p>
+                  <p className="text-slate-400">No weapons installed on this vehicle.</p>
                 )}
               </div>
               
               {/* Available weapons */}
-              <div>
-                <h3 className="font-bold text-lg">Available Weapons</h3>
-                <p className="text-sm text-gray-500 mt-1">
+              <div className="bg-slate-700 p-4 rounded-lg">
+                <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
+                  <Target className="text-blue-400" size={20} />
+                  Available Weapons
+                </h3>
+                <p className="text-slate-400 text-sm">
                   Purchasing and installing new weapons will be available in a future update.
                 </p>
                 {/* We'll implement this in a future phase */}
@@ -524,30 +567,33 @@ const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
           {activeTab === 'components' && (
             <div className="space-y-6">
               {/* Current components */}
-              <div>
-                <div className="flex justify-between items-center">
-                  <h3 className="font-bold text-lg">Current Components</h3>
-                  <span className="text-sm">
+              <div className="bg-slate-700 p-4 rounded-lg">
+                <div className="flex justify-between items-center mb-3">
+                  <h3 className="font-bold text-lg flex items-center gap-2">
+                    <Cpu className="text-purple-400" size={20} />
+                    Current Components
+                  </h3>
+                  <span className="text-sm bg-slate-600 px-2 py-1 rounded">
                     {vehicle.components.length}/{vehicle.componentSlots} Slots Used
                   </span>
                 </div>
                 
                 {vehicle.components.length > 0 ? (
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                     {vehicle.components.map(component => (
-                      <div key={component.id} className="border rounded p-3">
+                      <div key={component.id} className="bg-slate-800 rounded-lg p-3">
                         <div className="flex justify-between">
-                          <div className="font-medium">{component.name}</div>
-                          <div className="text-sm bg-gray-200 px-2 py-0.5 rounded capitalize">
+                          <div className="font-medium text-slate-200">{component.name}</div>
+                          <div className="text-sm bg-slate-700 px-2 py-0.5 rounded capitalize">
                             {getComponentTypeName(component.type)}
                           </div>
                         </div>
                         
                         <div className="text-sm mt-1">
-                          <div>Level {component.level} Component</div>
+                          <div className="text-slate-300">Level {component.level} Component</div>
                           <div className="mt-1">
-                            <span className="text-gray-600">Condition:</span> {component.condition}%
-                            <div className="w-full bg-gray-300 rounded-full h-1 mt-1">
+                            <span className="text-slate-400">Condition:</span> <span className="text-slate-200">{component.condition}%</span>
+                            <div className="w-full bg-slate-900 rounded-full h-1 mt-1">
                               <div 
                                 className={`${
                                   component.condition < 30 ? 'bg-red-500' : 
@@ -563,13 +609,13 @@ const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
                         {/* Component stat effects */}
                         {component.stats && Object.keys(component.stats).length > 0 && (
                           <div className="mt-2 text-xs">
-                            <div className="font-medium">Stats Affected:</div>
+                            <div className="font-medium text-slate-300">Stats Affected:</div>
                             <div className="flex flex-wrap gap-1 mt-1">
                               {Object.entries(component.stats).map(([stat, value]) => (
                                 <span 
                                   key={stat} 
                                   className={`px-2 py-0.5 rounded ${
-                                    Number(value) > 0 ? 'bg-green-100' : 'bg-red-100'
+                                    Number(value) > 0 ? 'bg-green-500/20 text-green-400' : 'bg-red-500/20 text-red-400'
                                   }`}
                                 >
                                   {stat.charAt(0).toUpperCase() + stat.slice(1)}: {value > 0 ? '+' : ''}{value}
@@ -578,21 +624,21 @@ const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
                             </div>
                           </div>
                         )}
-                        
-                        {/* Remove component button would be here */}
-                        {/* For now we'll implement this in a future phase */}
                       </div>
                     ))}
                   </div>
                 ) : (
-                  <p className="text-gray-500 mt-2">No components installed on this vehicle.</p>
+                  <p className="text-slate-400">No components installed on this vehicle.</p>
                 )}
               </div>
               
               {/* Available components */}
-              <div>
-                <h3 className="font-bold text-lg">Available Components</h3>
-                <p className="text-sm text-gray-500 mt-1">
+              <div className="bg-slate-700 p-4 rounded-lg">
+                <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
+                  <Cpu className="text-blue-400" size={20} />
+                  Available Components
+                </h3>
+                <p className="text-slate-400 text-sm">
                   Purchasing and installing new components will be available in a future update.
                 </p>
                 {/* We'll implement this in a future phase */}
@@ -603,10 +649,13 @@ const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
           {/* Upgrades Tab */}
           {activeTab === 'upgrades' && (
             <div>
-              <div className="mb-6">
-                <h3 className="font-bold text-lg">Available Upgrades</h3>
+              <div className="bg-slate-700 p-4 rounded-lg mb-6">
+                <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
+                  <ArrowUpCircle className="text-blue-400" size={20} />
+                  Available Upgrades
+                </h3>
                 {availableUpgrades.length > 0 ? (
-                  <div className="space-y-3 mt-2">
+                  <div className="space-y-3">
                     {availableUpgrades.map(upgradeKey => {
                       const upgradeVariant = require('../data/vehicles').VEHICLE_TYPES[upgradeKey];
                       const estimatedCost = Math.round((upgradeVariant.baseCost - 
@@ -614,35 +663,36 @@ const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
                       const canAfford = availableFunds >= estimatedCost;
                       
                       return (
-                        <div key={upgradeKey} className="border rounded p-3">
+                        <div key={upgradeKey} className="bg-slate-800 rounded-lg p-3">
                           <div className="flex justify-between">
-                            <div className="font-medium">{upgradeVariant.name}</div>
-                            <div className="text-sm">
+                            <div className="font-medium text-slate-200">{upgradeVariant.name}</div>
+                            <div className="text-sm text-green-400">
                               Est. Cost: ${estimatedCost.toLocaleString()}
                             </div>
                           </div>
                           
-                          <p className="text-sm text-gray-600 mt-1">
+                          <p className="text-sm text-slate-400 mt-1">
                             {upgradeVariant.description}
                           </p>
                           
                           <div className="grid grid-cols-2 md:grid-cols-4 gap-2 mt-2 text-sm">
-                            <div><span className="text-gray-600">Speed:</span> {upgradeVariant.baseStats.speed}</div>
-                            <div><span className="text-gray-600">Armor:</span> {upgradeVariant.baseStats.armor}</div>
-                            <div><span className="text-gray-600">Firepower:</span> {upgradeVariant.baseStats.firepower}</div>
-                            <div><span className="text-gray-600">Range:</span> {upgradeVariant.baseStats.range}</div>
+                            <div className="text-slate-300"><span className="text-slate-400">Speed:</span> {upgradeVariant.baseStats.speed}</div>
+                            <div className="text-slate-300"><span className="text-slate-400">Armor:</span> {upgradeVariant.baseStats.armor}</div>
+                            <div className="text-slate-300"><span className="text-slate-400">Firepower:</span> {upgradeVariant.baseStats.firepower}</div>
+                            <div className="text-slate-300"><span className="text-slate-400">Range:</span> {upgradeVariant.baseStats.range}</div>
                           </div>
                           
                           <div className="mt-3">
                             <button
                               disabled={!canAfford}
                               onClick={() => setShowUpgradeConfirm(upgradeKey)}
-                              className={`w-full py-1 rounded ${
+                              className={`w-full py-2 rounded flex items-center justify-center gap-2 ${
                                 !canAfford 
-                                  ? 'bg-gray-300 cursor-not-allowed' 
+                                  ? 'bg-slate-600 cursor-not-allowed' 
                                   : 'bg-blue-500 text-white hover:bg-blue-600'
                               }`}
                             >
+                              <ArrowUpCircle size={16} />
                               {canAfford ? 'Upgrade' : 'Insufficient Funds'}
                             </button>
                           </div>
@@ -650,19 +700,19 @@ const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
                           {/* Confirmation dialog */}
                           {showUpgradeConfirm === upgradeKey && (
                             <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-                              <div className="bg-white rounded-lg p-6 max-w-md">
-                                <h3 className="font-bold text-lg">Confirm Upgrade</h3>
-                                <p className="my-4">
+                              <div className="bg-slate-800 rounded-lg p-6 max-w-md border border-slate-700">
+                                <h3 className="font-bold text-lg text-slate-200">Confirm Upgrade</h3>
+                                <p className="my-4 text-slate-300">
                                   Are you sure you want to upgrade to the {upgradeVariant.name}? 
                                   This will cost ${estimatedCost.toLocaleString()}.
                                 </p>
-                                <p className="my-4 text-sm">
+                                <p className="my-4 text-sm text-slate-400">
                                   Crew will be transferred, but some components may be incompatible.
                                 </p>
                                 <div className="flex justify-end space-x-3">
                                   <button
                                     onClick={() => setShowUpgradeConfirm(null)}
-                                    className="px-4 py-2 bg-gray-200 rounded hover:bg-gray-300"
+                                    className="px-4 py-2 bg-slate-700 text-slate-300 rounded hover:bg-slate-600"
                                   >
                                     Cancel
                                   </button>
@@ -681,7 +731,7 @@ const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
                     })}
                   </div>
                 ) : (
-                  <p className="text-gray-500 mt-2">
+                  <p className="text-slate-400">
                     No upgrades available for this vehicle. Research new technologies to unlock upgrades.
                   </p>
                 )}

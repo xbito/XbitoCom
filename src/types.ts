@@ -15,6 +15,7 @@ export interface Base {
   vehicles: Vehicle[];
   radarRange: number;
   radarEffectiveness: number;
+  personnelCapacity?: number; // Maximum personnel capacity for this base
 }
 
 export interface Personnel {

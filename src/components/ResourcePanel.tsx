@@ -7,6 +7,31 @@ interface ResourcePanelProps {
 }
 
 const ResourcePanel: React.FC<ResourcePanelProps> = ({ gameState }) => {
+  // Calculate total personnel (available + assigned)
+  const calculateTotalPersonnel = () => {
+    let total = gameState?.availablePersonnel?.length || 0;
+    
+    // Add personnel assigned to bases
+    gameState?.bases?.forEach(base => {
+      base.personnel.forEach(() => total++);
+      
+      // Add personnel assigned to facilities
+      base.facilities.forEach(facility => {
+        total += facility.personnel.length;
+      });
+      
+      // Add personnel assigned to vehicles
+      base.vehicles.forEach(vehicle => {
+        total += vehicle.crew.length;
+      });
+    });
+    
+    return total;
+  };
+  
+  const availablePersonnel = gameState?.availablePersonnel?.length || 0;
+  const totalPersonnel = calculateTotalPersonnel();
+
   return (
     <div className="fixed bottom-0 left-0 right-0 bg-slate-800 border-t border-slate-700">
       <div className="container mx-auto p-4">
@@ -20,8 +45,8 @@ const ResourcePanel: React.FC<ResourcePanelProps> = ({ gameState }) => {
           <ResourceCard
             icon={<Users className="text-yellow-400" />}
             title="Personnel"
-            value={gameState && gameState.personnel ? gameState.personnel : 0}
-            description="Available agents"
+            value={`${availablePersonnel} / ${totalPersonnel}`}
+            description="Available / Total agents"
           />
           <ResourceCard
             icon={<Microscope className="text-purple-400" />}

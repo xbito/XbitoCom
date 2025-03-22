@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Globe2, Database, Users, Microscope, DollarSign } from 'lucide-react';
+import { useState, useCallback } from 'react';
+import { Globe2, Shield, Users, Microscope, DollarSign } from 'lucide-react';
 import WorldMap from './components/WorldMap';
 import ResourcePanel from './components/ResourcePanel';
 import SidePanel from './components/SidePanel';
@@ -11,7 +11,8 @@ import IntroModal from './components/IntroModal';
 import TimeControlPanel from './components/TimeControlPanel';
 import EventModal from './components/EventModal';
 import YearlyReviewModal from './components/YearlyReviewModal';
-import { GameState, Base, Continent, Personnel, ResearchProject } from './types';
+import HangarModal from './components/HangarModal';
+import { GameState, Base, Continent, Personnel, ResearchProject, Transaction } from './types';
 import { FACILITY_TYPES } from './data/facilities';
 import { BASE_SALARIES, generatePersonnel } from './data/personnel';
 import { CONTINENTS } from './data/continents';
@@ -77,6 +78,11 @@ function App() {
     threatLevel: 0,
     activeResearchProject: null,
     completedResearch: [],
+    activeUFOs : [],
+    detectedUFOs: [],
+    interceptedUFOs: [],
+    destroyedUFOs: [],
+    escapedUFOs: [],
     financials: {
       monthlyIncome: 2000000,
       monthlyExpenses: {
@@ -99,18 +105,19 @@ function App() {
     }
   });
 
-  type ModalType = 'intro' | 'base' | 'personnel' | 'research' | 'financial' | 'event' | 'yearlyReview' | null;
+  type ModalType = 'intro' | 'base' | 'personnel' | 'research' | 'financial' | 'event' | 'yearlyReview' | 'hangar' | null;
   const [activeModal, setActiveModal] = useState<ModalType>('intro');
   const [selectedBase, setSelectedBase] = useState<Base | null>(null);
   const [selectedContinent, setSelectedContinent] = useState<Continent | null>(null);
   const [currentEvent, setCurrentEvent] = useState<{ event: GameEvent; message: string } | null>(null);
   const [yearlyReview, setYearlyReview] = useState<YearlyReview | null>(null);
+  const [selectedHangarBase, setSelectedHangarBase] = useState<Base | null>(null);
 
-  const addTransaction = (
+  const addTransaction = useCallback((
     amount: number,
-    type: 'income' | 'expense',
+    type: Transaction['type'],
     description: string,
-    category: 'funding' | 'personnel' | 'facilities' | 'research' | 'equipment' | 'maintenance' | 'other'
+    category: Transaction['category']
   ) => {
     setGameState(prev => ({
       ...prev,
@@ -129,9 +136,20 @@ function App() {
         ]
       }
     }));
-  };
+  }, []);
 
-  const handleCreateBase = (base: Base) => {
+  const updateGameStateFunds = useCallback((newAmount: number) => {
+    setGameState(prev => ({ ...prev, funds: newAmount }));
+  }, []);
+
+  const updateGameStateBase = useCallback((updatedBase: Base) => {
+    setGameState(prev => ({
+      ...prev,
+      bases: prev.bases.map(b => b.id === updatedBase.id ? updatedBase : b)
+    }));
+  }, []);
+
+  const handleCreateBase = useCallback((base: Base) => {
     const cost = 2000000;
     setGameState(prev => ({
       ...prev,
@@ -140,20 +158,20 @@ function App() {
     }));
     addTransaction(cost, 'expense', `New base construction: ${base.name}`, 'facilities');
     handleCloseBaseModal();
-  };
+  }, [addTransaction]);
 
-  const handleBaseClick = (base: Base) => {
+  const handleBaseClick = useCallback((base: Base) => {
     setSelectedBase(base);
     setActiveModal('base');
-  };
+  }, []);
 
-  const handleCloseBaseModal = () => {
+  const handleCloseBaseModal = useCallback(() => {
     setActiveModal(null);
     setSelectedBase(null);
     setSelectedContinent(null);
-  };
+  }, []);
 
-  const handleUpgradeFacility = (baseId: string, facilityId: string) => {
+  const handleUpgradeFacility = useCallback((baseId: string, facilityId: string) => {
     setGameState(prev => {
       const base = prev.bases.find(b => b.id === baseId);
       const facility = base?.facilities.find(f => f.id === facilityId);
@@ -201,9 +219,9 @@ function App() {
         funds: prev.funds - upgradeCost,
       };
     });
-  };
+  }, [addTransaction]);
 
-  const handleAddFacility = (baseId: string, facilityType: string) => {
+  const handleAddFacility = useCallback((baseId: string, facilityType: string) => {
     if (!FACILITY_TYPES[facilityType]) return;
 
     setGameState(prev => {
@@ -244,9 +262,9 @@ function App() {
         funds: prev.funds - cost,
       };
     });
-  };
+  }, [addTransaction]);
 
-  const handleHirePersonnel = (personnel: Personnel) => {
+  const handleHirePersonnel = useCallback((personnel: Personnel) => {
     const cost = BASE_SALARIES[personnel.role];
     setGameState(prev => ({
       ...prev,
@@ -259,9 +277,9 @@ function App() {
       `Hired new ${personnel.role}: ${personnel.name}`,
       'personnel'
     );
-  };
+  }, [addTransaction]);
 
-  const handleAssignPersonnel = (personnelId: string, baseId: string, facilityId: string) => {
+  const handleAssignPersonnel = useCallback((personnelId: string, baseId: string, facilityId: string) => {
     setGameState(prev => {
       const personnel = prev.availablePersonnel.find(p => p.id === personnelId);
       if (!personnel) return prev;
@@ -291,9 +309,9 @@ function App() {
         bases: newBases,
       };
     });
-  };
+  }, []);
 
-  const handleTrainPersonnel = (personnelId: string, skill: keyof Personnel['skills']) => {
+  const handleTrainPersonnel = useCallback((personnelId: string, skill: keyof Personnel['skills']) => {
     const trainingCost = 10000;
     setGameState(prev => {
       const personnel = prev.availablePersonnel.find(p => p.id === personnelId);
@@ -324,9 +342,9 @@ function App() {
         }),
       };
     });
-  };
+  }, [addTransaction]);
 
-  const handleStartResearch = (project: ResearchProject) => {
+  const handleStartResearch = useCallback((project: ResearchProject) => {
     setGameState(prev => {
       addTransaction(
         project.cost,
@@ -349,14 +367,14 @@ function App() {
       };
     });
     setActiveModal(null);
-  };
+  }, [addTransaction]);
 
-  const handleContinentSelect = (continent: Continent) => {
+  const handleContinentSelect = useCallback((continent: Continent) => {
     setSelectedContinent(continent);
     setActiveModal('base');
-  };
+  }, []);
 
-  const handleAdvanceTime = () => {
+  const handleAdvanceTime = useCallback(() => {
     setGameState(prev => {
       const newDate = new Date(prev.date);
       newDate.setMonth(newDate.getMonth() + 1);
@@ -407,10 +425,15 @@ function App() {
 
       return updatedState;
     });
-  };
+  }, []);
+
+  const handleOpenHangar = useCallback((base: Base) => {
+    setSelectedHangarBase(base);
+    setActiveModal('hangar');
+  }, []);
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white">
+    <div className="min-h-screen bg-slate-900 text-white relative">
       <header className="bg-slate-800 p-4 border-b border-slate-700">
         <div className="container mx-auto flex justify-between items-center">
           <h1 className="text-2xl font-bold flex items-center gap-2">
@@ -423,15 +446,28 @@ function App() {
               <span>${gameState.funds.toLocaleString()}</span>
             </div>
             <div className="flex items-center gap-2">
-              <Database className="text-purple-400" />
+              <Microscope className="text-purple-400" />
               <span>{gameState.research}%</span>
             </div>
             <div className="flex items-center gap-2">
               <Users className="text-yellow-400" />
-              <span>{gameState.availablePersonnel.length}</span>
+              <span>{(() => {
+                // Calculate total personnel count
+                let total = gameState.availablePersonnel.length;
+                gameState.bases.forEach(base => {
+                  base.personnel.forEach(() => total++);
+                  base.facilities.forEach(facility => {
+                    total += facility.personnel.length;
+                  });
+                  base.vehicles.forEach(vehicle => {
+                    total += vehicle.crew.length;
+                  });
+                });
+                return `${gameState.availablePersonnel.length}/${total}`;
+              })()}</span>
             </div>
             <div className="flex items-center gap-2">
-              <Microscope className="text-red-400" />
+              <Shield className="text-red-400" />
               <span>Threat Level: {gameState.threatLevel}</span>
             </div>
           </div>
@@ -474,6 +510,7 @@ function App() {
           onCreate={handleCreateBase}
           onUpgrade={handleUpgradeFacility}
           onAddFacility={handleAddFacility}
+          onOpenHangar={handleOpenHangar}
           existingBase={selectedBase}
           availablePersonnel={gameState.availablePersonnel.length}
           availableFunds={gameState.funds}
@@ -524,6 +561,21 @@ function App() {
             setYearlyReview(null);
             setActiveModal(null);
           }}
+        />
+      )}
+
+      {activeModal === 'hangar' && selectedHangarBase && (
+        <HangarModal
+          isOpen={true}
+          onClose={() => {
+            setActiveModal(null);
+            setSelectedHangarBase(null);
+          }}
+          base={selectedHangarBase}
+          updateBase={updateGameStateBase}
+          availableFunds={gameState.funds}
+          updateFunds={updateGameStateFunds}
+          completedResearch={gameState.completedResearch.map(r => r.id)}
         />
       )}
     </div>

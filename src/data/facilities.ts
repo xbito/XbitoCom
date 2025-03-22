@@ -1,6 +1,6 @@
-import { FacilityType } from '../types';
+import { FacilityType, Facility } from '../types';
 
-export const FACILITY_TYPES: Record<string, FacilityType> = {
+export const FACILITY_TYPES: Record<FacilityType['type'], FacilityType> = {
   powerPlant: {
     type: 'powerPlant',
     name: 'Power Plant',
@@ -72,3 +72,35 @@ export const FACILITY_TYPES: Record<string, FacilityType> = {
     size: 2,
   },
 };
+
+export function createFacility(type: FacilityType['type'], level: number = 1): Facility {
+  const facilityType = FACILITY_TYPES[type];
+  if (!facilityType) {
+    throw new Error(`Unknown facility type: ${type}`);
+  }
+
+  const facility: Facility = {
+    id: crypto.randomUUID(),
+    type: type as 'barracks' | 'hangar' | 'radar' | 'defense' | 'research' | 'powerPlant',
+    level,
+    personnel: [],
+    powerUsage: facilityType.basePowerUsage * level,
+    maintenance: facilityType.baseMaintenance * Math.pow(facilityType.upgradeMultiplier, level - 1),
+  };
+
+  // Add hangar-specific properties
+  if (type === 'hangar') {
+    facility.vehicles = [];
+    facility.vehicleCapacity = Math.floor(facilityType.vehicleCapacity! * Math.pow(facilityType.vehicleCapacityMultiplier!, level - 1));
+    facility.maintenanceBays = facilityType.maintenanceBays! * level;
+    facility.repairSpeed = facilityType.repairSpeed! * (1 + (level - 1) * 0.2);
+    facility.maintenanceQueue = [];
+    facility.upgradeLevel = {
+      equipmentQuality: 1,
+      baySize: 1,
+      crewTraining: 1
+    };
+  }
+
+  return facility;
+}
