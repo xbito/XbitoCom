@@ -1,5 +1,5 @@
-import { useState, useCallback } from 'react';
-import { Globe2, Shield, Users, Microscope, DollarSign } from 'lucide-react';
+import { useState, useCallback, useEffect } from 'react';
+import { Globe2, Shield, Users, Microscope, DollarSign, Clock, ChevronRight, FastForward } from 'lucide-react';
 import WorldMap from './components/WorldMap';
 import ResourcePanel from './components/ResourcePanel';
 import SidePanel from './components/SidePanel';
@@ -8,10 +8,10 @@ import PersonnelModal from './components/PersonnelModal';
 import ResearchModal from './components/ResearchModal';
 import FinancialModal from './components/FinancialModal';
 import IntroModal from './components/IntroModal';
-import TimeControlPanel from './components/TimeControlPanel';
 import EventModal from './components/EventModal';
 import YearlyReviewModal from './components/YearlyReviewModal';
 import HangarModal from './components/HangarModal';
+import ConfirmationDialog from './components/ConfirmationDialog';
 import { GameState, Base, Continent, Personnel, ResearchProject, Transaction } from './types';
 import { FACILITY_TYPES } from './data/facilities';
 import { BASE_SALARIES, generatePersonnel } from './data/personnel';
@@ -112,6 +112,54 @@ function App() {
   const [currentEvent, setCurrentEvent] = useState<{ event: GameEvent; message: string } | null>(null);
   const [yearlyReview, setYearlyReview] = useState<YearlyReview | null>(null);
   const [selectedHangarBase, setSelectedHangarBase] = useState<Base | null>(null);
+  
+  // State to track user actions during a turn
+  const [actionsPerformed, setActionsPerformed] = useState<boolean>(false);
+  // State for the confirmation dialog
+  const [showNoActionConfirmation, setShowNoActionConfirmation] = useState<boolean>(false);
+  // Store previous funds to detect spending
+  const [previousFunds, setPreviousFunds] = useState<number>(10000000); // Initial funds
+
+  // Track transactions in the current turn
+  const [currentTurnTransactions, setCurrentTurnTransactions] = useState<number>(0);
+
+  // Reset action tracking when a new turn starts
+  const resetActionTracking = useCallback(() => {
+    setActionsPerformed(false);
+    setPreviousFunds(gameState.funds);
+    setCurrentTurnTransactions(gameState.financials.transactions.length);
+  }, [gameState.funds, gameState.financials.transactions.length]);
+
+  // Check if any meaningful actions were taken this turn
+  const checkForActions = useCallback(() => {
+    // Check if any transactions were added this turn
+    const newTransactions = gameState.financials.transactions.length - currentTurnTransactions;
+    
+    // Actions considered:
+    // 1. New transactions added
+    // 2. Funds spent (not just monthly expenses)
+    // 3. Personnel assignments changed
+    return newTransactions > 0 || gameState.funds < previousFunds;
+  }, [gameState.funds, gameState.financials.transactions.length, currentTurnTransactions, previousFunds]);
+
+  // Effect to reset tracking on first load and after turn advance
+  useEffect(() => {
+    resetActionTracking();
+  }, [gameState.date, resetActionTracking]);
+
+  // Track actions when transactions happen
+  useEffect(() => {
+    if (gameState.financials.transactions.length > currentTurnTransactions) {
+      setActionsPerformed(true);
+    }
+  }, [gameState.financials.transactions.length, currentTurnTransactions]);
+
+  // Track actions when funds change (outside of automatic changes)
+  useEffect(() => {
+    if (gameState.funds < previousFunds) {
+      setActionsPerformed(true);
+    }
+  }, [gameState.funds, previousFunds]);
 
   const addTransaction = useCallback((
     amount: number,
@@ -375,6 +423,14 @@ function App() {
   }, []);
 
   const handleAdvanceTime = useCallback(() => {
+    // Check if any actions were performed this turn
+    if (!actionsPerformed && !checkForActions()) {
+      // No actions were performed, show confirmation dialog
+      setShowNoActionConfirmation(true);
+      return;
+    }
+
+    // Actions were performed or user confirmed, proceed with turn advancement
     setGameState(prev => {
       const newDate = new Date(prev.date);
       newDate.setMonth(newDate.getMonth() + 1);
@@ -423,9 +479,20 @@ function App() {
         });
       }
 
+      // Reset the action tracking for the new turn
+      resetActionTracking();
+      
       return updatedState;
     });
-  }, []);
+  }, [actionsPerformed, checkForActions, resetActionTracking]);
+
+  // Handle confirmation of advancing without actions
+  const handleConfirmAdvanceWithoutActions = useCallback(() => {
+    setShowNoActionConfirmation(false);
+    // Force the turn to advance anyway
+    setActionsPerformed(true);
+    handleAdvanceTime();
+  }, [handleAdvanceTime]);
 
   const handleOpenHangar = useCallback((base: Base) => {
     setSelectedHangarBase(base);
@@ -440,36 +507,47 @@ function App() {
             <Globe2 className="text-blue-400" />
             Global Defense Agency
           </h1>
-          <div className="flex gap-6">
+          
+          <div className="flex gap-6 items-center">
+            {/* Financial information */}
             <div className="flex items-center gap-2">
               <DollarSign className="text-green-400" />
-              <span>${gameState.funds.toLocaleString()}</span>
+              <div>
+                <div>${gameState.funds.toLocaleString()}</div>
+                <div className="text-xs text-slate-400">
+                  {gameState.financials.monthlyIncome > gameState.financials.monthlyExpenses.personnel + 
+                   gameState.financials.monthlyExpenses.facilities + 
+                   gameState.financials.monthlyExpenses.research + 
+                   gameState.financials.monthlyExpenses.other
+                   ? '+' : '-'}
+                  ${Math.abs(gameState.financials.monthlyIncome - (
+                    gameState.financials.monthlyExpenses.personnel + 
+                    gameState.financials.monthlyExpenses.facilities + 
+                    gameState.financials.monthlyExpenses.research + 
+                    gameState.financials.monthlyExpenses.other
+                  )).toLocaleString()}/month
+                </div>
+              </div>
             </div>
+            
+            {/* Time information */}
             <div className="flex items-center gap-2">
-              <Microscope className="text-purple-400" />
-              <span>{gameState.research}%</span>
+              <Clock className="text-blue-400" />
+              <div>
+                <div>{gameState.date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}</div>
+                <div className="text-xs text-slate-400">Turn {Math.floor((gameState.date.getTime() - new Date('2025-01-01').getTime()) / (30 * 24 * 60 * 60 * 1000)) + 1}</div>
+              </div>
             </div>
-            <div className="flex items-center gap-2">
-              <Users className="text-yellow-400" />
-              <span>{(() => {
-                // Calculate total personnel count
-                let total = gameState.availablePersonnel.length;
-                gameState.bases.forEach(base => {
-                  base.personnel.forEach(() => total++);
-                  base.facilities.forEach(facility => {
-                    total += facility.personnel.length;
-                  });
-                  base.vehicles.forEach(vehicle => {
-                    total += vehicle.crew.length;
-                  });
-                });
-                return `${gameState.availablePersonnel.length}/${total}`;
-              })()}</span>
-            </div>
-            <div className="flex items-center gap-2">
-              <Shield className="text-red-400" />
-              <span>Threat Level: {gameState.threatLevel}</span>
-            </div>
+            
+            {/* Continue button moved to header */}
+            <button
+              onClick={handleAdvanceTime}
+              disabled={!!activeModal}
+              className="bg-blue-500 hover:bg-blue-600 disabled:bg-slate-600 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded flex items-center justify-center gap-2"
+            >
+              <ChevronRight size={16} />
+              Continue
+            </button>
           </div>
         </div>
       </header>
@@ -492,12 +570,6 @@ function App() {
       </main>
 
       <ResourcePanel gameState={gameState} />
-
-      <TimeControlPanel
-        gameState={gameState}
-        onAdvanceTime={handleAdvanceTime}
-        disabled={!!activeModal} // Disable time advance when any modal is open
-      />
 
       {/* Modal rendering based on activeModal state */}
       {activeModal === 'intro' && (
@@ -578,6 +650,17 @@ function App() {
           completedResearch={gameState.completedResearch.map(r => r.id)}
         />
       )}
+      
+      {/* No action confirmation dialog */}
+      <ConfirmationDialog
+        isOpen={showNoActionConfirmation}
+        onClose={() => setShowNoActionConfirmation(false)}
+        onConfirm={handleConfirmAdvanceWithoutActions}
+        title="No Actions Taken"
+        message="You haven't performed any actions this turn. Are you sure you want to continue to the next month?"
+        confirmText="Continue Anyway"
+        cancelText="Go Back"
+      />
     </div>
   );
 }
