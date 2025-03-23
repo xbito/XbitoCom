@@ -1,7 +1,16 @@
-import React, { useState } from 'react';
-import { X, Users, Briefcase, Trophy, DollarSign, Activity, Building2, GraduationCap } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { X, Users, Briefcase, Trophy, DollarSign, Activity, Building2, GraduationCap, MapPin, Layers } from 'lucide-react';
 import { Personnel, PersonnelRole, GameState, Base, Facility } from '../types';
 import { ROLE_DESCRIPTIONS, generatePersonnel, INITIAL_SKILLS, BASE_SALARIES } from '../data/personnel';
+import { FACILITY_TYPES } from '../data/facilities';
+
+// Extended personnel type with location information for the display
+interface AssignedPersonnelDisplay extends Personnel {
+  baseName: string;
+  facilityName?: string;
+  vehicleName?: string;
+  assignmentType: 'facility' | 'vehicle' | 'base';
+}
 
 interface PersonnelModalProps {
   onClose: () => void;
@@ -23,6 +32,50 @@ const PersonnelModal: React.FC<PersonnelModalProps> = ({
   const [showTrainingOptions, setShowTrainingOptions] = useState(false);
   const [showAssignmentOptions, setShowAssignmentOptions] = useState(false);
   const [selectedBase, setSelectedBase] = useState<Base | null>(null);
+  const [activeTab, setActiveTab] = useState<'available' | 'assigned'>('available');
+  const [selectedAssignedPersonnel, setSelectedAssignedPersonnel] = useState<AssignedPersonnelDisplay | null>(null);
+  
+  // Create a list of all personnel assigned to bases, facilities, and vehicles
+  const assignedPersonnel = useMemo(() => {
+    const assigned: AssignedPersonnelDisplay[] = [];
+    
+    gameState?.bases?.forEach(base => {
+      // Add personnel assigned directly to the base
+      base.personnel.forEach(person => {
+        assigned.push({
+          ...person,
+          baseName: base.name,
+          assignmentType: 'base'
+        });
+      });
+      
+      // Add personnel assigned to facilities
+      base.facilities.forEach(facility => {
+        facility.personnel.forEach(person => {
+          assigned.push({
+            ...person,
+            baseName: base.name,
+            facilityName: FACILITY_TYPES[facility.type]?.name || facility.type,
+            assignmentType: 'facility'
+          });
+        });
+      });
+      
+      // Add personnel assigned to vehicles
+      base.vehicles.forEach(vehicle => {
+        vehicle.crew.forEach(person => {
+          assigned.push({
+            ...person,
+            baseName: base.name,
+            vehicleName: vehicle.name,
+            assignmentType: 'vehicle'
+          });
+        });
+      });
+    });
+    
+    return assigned;
+  }, [gameState?.bases]);
 
   const handleHire = () => {
     if (!selectedRole) return;
@@ -82,6 +135,17 @@ const PersonnelModal: React.FC<PersonnelModalProps> = ({
       </div>
     </div>
   );
+  
+  // Helper to get assignment location display text
+  const getAssignmentLocation = (person: AssignedPersonnelDisplay) => {
+    if (person.assignmentType === 'facility') {
+      return `${person.facilityName} at ${person.baseName}`;
+    } else if (person.assignmentType === 'vehicle') {
+      return `${person.vehicleName} at ${person.baseName}`;
+    } else {
+      return person.baseName;
+    }
+  };
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
@@ -99,59 +163,129 @@ const PersonnelModal: React.FC<PersonnelModalProps> = ({
           </button>
         </div>
 
-        <div className="grid grid-cols-2 gap-6">
-          {/* Hiring Panel */}
-          <div className="bg-slate-700 rounded-lg p-4">
-            <h3 className="text-lg font-semibold mb-4">Hire New Personnel</h3>
-            <div className="grid grid-cols-2 gap-3 mb-4">
-              {(Object.keys(ROLE_DESCRIPTIONS) as PersonnelRole[]).map((role) => (
-                <button
-                  key={role}
-                  onClick={() => setSelectedRole(role)}
-                  className={`p-3 rounded-lg ${
-                    selectedRole === role
-                      ? 'bg-blue-500 text-white'
-                      : 'bg-slate-600 hover:bg-slate-500'
-                  }`}
-                >
-                  <div className="font-medium capitalize">{role}</div>
-                  <div className="text-sm text-slate-300">{ROLE_DESCRIPTIONS[role]}</div>
-                </button>
-              ))}
-            </div>
-            {selectedRole && (
-              <div className="mt-4">
-                <h4 className="font-medium mb-2">Preview</h4>
-                <div className="bg-slate-800 rounded-lg p-4">
-                  <div className="mb-4">
-                    <div className="text-lg font-medium capitalize">{selectedRole}</div>
-                    <div className="text-sm text-slate-400">{ROLE_DESCRIPTIONS[selectedRole]}</div>
-                  </div>
-                  {Object.entries(INITIAL_SKILLS[selectedRole]).map(([skill, value]) => (
-                    renderSkillBar(value, skill.charAt(0).toUpperCase() + skill.slice(1), skill)
-                  ))}
-                  <button
-                    onClick={handleHire}
-                    className="w-full mt-4 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded flex items-center justify-center gap-2"
-                  >
-                    <DollarSign size={16} />
-                    Hire ({BASE_SALARIES[selectedRole].toLocaleString()}/year)
-                  </button>
-                </div>
-              </div>
-            )}
-          </div>
+        <div className="flex mb-6">
+          <button
+            onClick={() => {
+              setActiveTab('available');
+              setSelectedAssignedPersonnel(null);
+            }}
+            className={`flex-1 py-2 rounded-t-lg ${activeTab === 'available' ? 'bg-slate-700' : 'bg-slate-600 hover:bg-slate-500'}`}
+          >
+            Available Personnel
+          </button>
+          <button
+            onClick={() => {
+              setActiveTab('assigned');
+              setSelectedPersonnel(null);
+            }}
+            className={`flex-1 py-2 rounded-t-lg ${activeTab === 'assigned' ? 'bg-slate-700' : 'bg-slate-600 hover:bg-slate-500'}`}
+          >
+            Assigned Personnel
+          </button>
+        </div>
 
-          {/* Personnel List */}
+        {activeTab === 'available' && (
+          <div className="grid grid-cols-2 gap-6">
+            {/* Hiring Panel */}
+            <div className="bg-slate-700 rounded-lg p-4">
+              <h3 className="text-lg font-semibold mb-4">Hire New Personnel</h3>
+              <div className="grid grid-cols-2 gap-3 mb-4">
+                {(Object.keys(ROLE_DESCRIPTIONS) as PersonnelRole[]).map((role) => (
+                  <button
+                    key={role}
+                    onClick={() => setSelectedRole(role)}
+                    className={`p-3 rounded-lg ${
+                      selectedRole === role
+                        ? 'bg-blue-500 text-white'
+                        : 'bg-slate-600 hover:bg-slate-500'
+                    }`}
+                  >
+                    <div className="font-medium capitalize">{role}</div>
+                    <div className="text-sm text-slate-300">{ROLE_DESCRIPTIONS[role]}</div>
+                  </button>
+                ))}
+              </div>
+              {selectedRole && (
+                <div className="mt-4">
+                  <h4 className="font-medium mb-2">Preview</h4>
+                  <div className="bg-slate-800 rounded-lg p-4">
+                    <div className="mb-4">
+                      <div className="text-lg font-medium capitalize">{selectedRole}</div>
+                      <div className="text-sm text-slate-400">{ROLE_DESCRIPTIONS[selectedRole]}</div>
+                    </div>
+                    {Object.entries(INITIAL_SKILLS[selectedRole]).map(([skill, value]) => (
+                      renderSkillBar(value, skill.charAt(0).toUpperCase() + skill.slice(1), skill)
+                    ))}
+                    <button
+                      onClick={handleHire}
+                      className="w-full mt-4 bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-4 rounded flex items-center justify-center gap-2"
+                    >
+                      <DollarSign size={16} />
+                      Hire ({BASE_SALARIES[selectedRole].toLocaleString()}/year)
+                    </button>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Personnel List */}
+            <div>
+              <h3 className="text-lg font-semibold mb-4">Available Personnel</h3>
+              <div className="space-y-3">
+                {gameState?.availablePersonnel?.map((person) => (
+                  <button
+                    key={person.id}
+                    onClick={() => setSelectedPersonnel(person)}
+                    className={`w-full text-left p-4 rounded-lg ${
+                      selectedPersonnel?.id === person.id
+                        ? 'bg-blue-500'
+                        : 'bg-slate-700 hover:bg-slate-600'
+                    }`}
+                  >
+                    <div className="flex justify-between items-start mb-2">
+                      <div>
+                        <div className="font-medium">{person.name}</div>
+                        <div className="text-sm text-slate-300 capitalize">{person.role}</div>
+                      </div>
+                      <div className="flex items-center gap-2 text-sm">
+                        <Activity size={16} />
+                        <span className="capitalize">{person.status}</span>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2 text-sm">
+                      <div className="flex items-center gap-1">
+                        <Trophy size={14} className="text-yellow-400" />
+                        <span>Exp: {person.experience}</span>
+                      </div>
+                      <div className="flex items-center gap-1">
+                        <Briefcase size={14} className="text-blue-400" />
+                        <span>{person.baseId ? 'Assigned' : 'Unassigned'}</span>
+                      </div>
+                    </div>
+                  </button>
+                ))}
+                {(!gameState?.availablePersonnel || gameState.availablePersonnel.length === 0) && (
+                  <div className="text-slate-400 text-center p-4">
+                    No personnel available
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {activeTab === 'assigned' && (
           <div>
-            <h3 className="text-lg font-semibold mb-4">Available Personnel</h3>
+            <h3 className="text-lg font-semibold mb-4">Assigned Personnel by Location</h3>
             <div className="space-y-3">
-              {gameState?.availablePersonnel?.map((person) => (
+              {assignedPersonnel.map((person) => (
                 <button
                   key={person.id}
-                  onClick={() => setSelectedPersonnel(person)}
+                  onClick={() => setSelectedAssignedPersonnel(
+                    selectedAssignedPersonnel?.id === person.id ? null : person
+                  )}
                   className={`w-full text-left p-4 rounded-lg ${
-                    selectedPersonnel?.id === person.id
+                    selectedAssignedPersonnel?.id === person.id
                       ? 'bg-blue-500'
                       : 'bg-slate-700 hover:bg-slate-600'
                   }`}
@@ -172,23 +306,23 @@ const PersonnelModal: React.FC<PersonnelModalProps> = ({
                       <span>Exp: {person.experience}</span>
                     </div>
                     <div className="flex items-center gap-1">
-                      <Briefcase size={14} className="text-blue-400" />
-                      <span>{person.baseId ? 'Assigned' : 'Unassigned'}</span>
+                      <MapPin size={14} className="text-green-400" />
+                      <span>{getAssignmentLocation(person)}</span>
                     </div>
                   </div>
                 </button>
               ))}
-              {(!gameState?.availablePersonnel || gameState.availablePersonnel.length === 0) && (
+              {(!assignedPersonnel || assignedPersonnel.length === 0) && (
                 <div className="text-slate-400 text-center p-4">
-                  No personnel available
+                  No personnel assigned
                 </div>
               )}
             </div>
           </div>
-        </div>
+        )}
 
         {/* Selected Personnel Details */}
-        {selectedPersonnel && (
+        {activeTab === 'available' && selectedPersonnel && (
           <div className="mt-6 bg-slate-700 rounded-lg p-4">
             <h3 className="text-lg font-semibold mb-4">Personnel Details</h3>
             <div className="grid grid-cols-2 gap-6">
@@ -282,6 +416,61 @@ const PersonnelModal: React.FC<PersonnelModalProps> = ({
                     )}
                   </div>
                 )}
+              </div>
+            </div>
+          </div>
+        )}
+        
+        {/* Selected Assigned Personnel Details */}
+        {activeTab === 'assigned' && selectedAssignedPersonnel && (
+          <div className="mt-6 bg-slate-700 rounded-lg p-4">
+            <h3 className="text-lg font-semibold mb-4">Personnel Details</h3>
+            <div className="grid grid-cols-2 gap-6">
+              <div>
+                <h4 className="font-medium mb-2">Skills</h4>
+                {Object.entries(selectedAssignedPersonnel.skills).map(([skill, value]) => (
+                  renderSkillBar(value, skill.charAt(0).toUpperCase() + skill.slice(1), skill)
+                ))}
+              </div>
+              <div>
+                <h4 className="font-medium mb-2">Assignment</h4>
+                <div className="space-y-2 bg-slate-800 p-4 rounded-lg">
+                  <div className="flex items-center gap-2">
+                    <Building2 className="text-blue-400" size={16} />
+                    <div>
+                      <div className="text-sm text-slate-400">Base</div>
+                      <div>{selectedAssignedPersonnel.baseName}</div>
+                    </div>
+                  </div>
+                  
+                  {selectedAssignedPersonnel.assignmentType === 'facility' && (
+                    <div className="flex items-center gap-2">
+                      <Layers className="text-purple-400" size={16} />
+                      <div>
+                        <div className="text-sm text-slate-400">Facility</div>
+                        <div>{selectedAssignedPersonnel.facilityName}</div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {selectedAssignedPersonnel.assignmentType === 'vehicle' && (
+                    <div className="flex items-center gap-2">
+                      <Layers className="text-red-400" size={16} />
+                      <div>
+                        <div className="text-sm text-slate-400">Vehicle</div>
+                        <div>{selectedAssignedPersonnel.vehicleName}</div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  <div className="flex items-center gap-2 mt-2">
+                    <Activity size={16} className="text-yellow-400" />
+                    <div>
+                      <div className="text-sm text-slate-400">Status</div>
+                      <div className="capitalize">{selectedAssignedPersonnel.status}</div>
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
