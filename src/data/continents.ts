@@ -5,8 +5,8 @@ export const CONTINENTS: Record<string, Continent> = {
     id: 'northAmerica',
     name: 'North America',
     maxBaseSize: 10,
-    personnelMultiplier: 1.2,
-    researchMultiplier: 1.5,
+    personnelMultiplier: 1.0,
+    researchMultiplier: 1.0,
     defenseMultiplier: 1.3,
     coordinates: {
       x1: 15,
@@ -19,9 +19,9 @@ export const CONTINENTS: Record<string, Continent> = {
     id: 'southAmerica',
     name: 'South America',
     maxBaseSize: 8,
-    personnelMultiplier: 1.1,
-    researchMultiplier: 1.2,
-    defenseMultiplier: 1.1,
+    personnelMultiplier: 1.2,
+    researchMultiplier: 1.0,
+    defenseMultiplier: 1.0,
     coordinates: {
       x1: 20,
       y1: 46,
@@ -33,9 +33,9 @@ export const CONTINENTS: Record<string, Continent> = {
     id: 'europe',
     name: 'Europe',
     maxBaseSize: 7,
-    personnelMultiplier: 1.4,
-    researchMultiplier: 1.6,
-    defenseMultiplier: 1.2,
+    personnelMultiplier: 1.0,
+    researchMultiplier: 1.5,
+    defenseMultiplier: 1.0,
     coordinates: {
       x1: 45,
       y1: 16,
@@ -46,10 +46,10 @@ export const CONTINENTS: Record<string, Continent> = {
   asia: {
     id: 'asia',
     name: 'Asia',
-    maxBaseSize: 12,
-    personnelMultiplier: 1.3,
-    researchMultiplier: 1.4,
-    defenseMultiplier: 1.4,
+    maxBaseSize: 12, // This is their advantage: largest base size
+    personnelMultiplier: 1.0,
+    researchMultiplier: 1.0, 
+    defenseMultiplier: 1.2,
     coordinates: {
       x1: 60,
       y1: 10,
@@ -62,8 +62,8 @@ export const CONTINENTS: Record<string, Continent> = {
     name: 'Africa',
     maxBaseSize: 9,
     personnelMultiplier: 1.0,
-    researchMultiplier: 1.1,
-    defenseMultiplier: 1.2,
+    researchMultiplier: 1.0,
+    defenseMultiplier: 1.0, // No specific bonuses, but balanced overall
     coordinates: {
       x1: 45,
       y1: 40,
@@ -75,7 +75,7 @@ export const CONTINENTS: Record<string, Continent> = {
     id: 'oceania',
     name: 'Oceania',
     maxBaseSize: 6,
-    personnelMultiplier: 1.1,
+    personnelMultiplier: 1.0,
     researchMultiplier: 1.3,
     defenseMultiplier: 1.0,
     coordinates: {

@@ -19,61 +19,11 @@ import { CONTINENTS } from './data/continents';
 import { MONTHLY_EVENTS, GameEvent, evaluateYearlyPerformance, YearlyReview } from './data/events';
 
 function App() {
-  // Create initial base
-  const initialBase: Base = {
-    id: crypto.randomUUID(),
-    name: "GDA Headquarters",
-    x: 25,
-    y: 20,
-    level: 1,
-    personnel: [],
-    power: 50,
-    powerUsage: 30,
-    continent: CONTINENTS.northAmerica,
-    maxSize: CONTINENTS.northAmerica.maxBaseSize,
-    facilities: [
-      {
-        id: crypto.randomUUID(),
-        type: 'powerPlant',
-        level: 1,
-        personnel: [],
-        powerUsage: FACILITY_TYPES.powerPlant.basePowerUsage,
-        maintenance: FACILITY_TYPES.powerPlant.baseMaintenance,
-      },
-      {
-        id: crypto.randomUUID(),
-        type: 'research',
-        level: 1,
-        personnel: [],
-        powerUsage: FACILITY_TYPES.research.basePowerUsage,
-        maintenance: FACILITY_TYPES.research.baseMaintenance,
-      },
-      {
-        id: crypto.randomUUID(),
-        type: 'barracks',
-        level: 1,
-        personnel: [],
-        powerUsage: FACILITY_TYPES.barracks.basePowerUsage,
-        maintenance: FACILITY_TYPES.barracks.baseMaintenance,
-      }
-    ],
-    vehicles: [],
-    radarRange: 100,
-    radarEffectiveness: 50
-  };
-
-  // Create initial personnel
-  const initialPersonnel: Personnel[] = [
-    generatePersonnel('scientist'),
-    generatePersonnel('engineer'),
-    generatePersonnel('soldier'),
-  ];
-
   const [gameState, setGameState] = useState<GameState>({
-    funds: 10000000,
+    funds: 20000000,
     research: 0,
-    availablePersonnel: initialPersonnel,
-    bases: [initialBase],
+    availablePersonnel: [],
+    bases: [],
     date: new Date('2025-01-01'),
     threatLevel: 0,
     activeResearchProject: null,
