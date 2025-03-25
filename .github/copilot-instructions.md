@@ -1,0 +1,1 @@
+This is a React application built with Vite, we should use ES module imports instead of CommonJS require statements.
