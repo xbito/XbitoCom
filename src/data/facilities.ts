@@ -26,13 +26,15 @@ export const FACILITY_TYPES: Record<FacilityType['type'], FacilityType> = {
   barracks: {
     type: 'barracks',
     name: 'Barracks',
-    description: 'Houses and trains personnel',
+    description: 'Houses and trains personnel. Can be assigned one commander to boost effectiveness.',
     baseCost: 300000,
-    basePersonnel: 5,
+    basePersonnel: 1, // Only 1 personnel slot for commander
     basePowerUsage: 10,
     baseMaintenance: 5000,
     upgradeMultiplier: 1.3,
     size: 2,
+    personnelCapacity: 10, // Level 1 barracks provides 10 base personnel capacity
+    personnelCapacityMultiplier: 1.5, // Each level increases base capacity by 50%
   },
   hangar: {
     type: 'hangar',
@@ -102,5 +104,85 @@ export function createFacility(type: FacilityType['type'], level: number = 1): F
     };
   }
 
+  // Add barracks-specific properties
+  if (type === 'barracks') {
+    // First level barracks gives 10 personnel capacity
+    // Each subsequent level adds 5 personnel capacity
+    if (level === 1) {
+      facility.personnelCapacity = facilityType.personnelCapacity;
+    } else {
+      // Base capacity of 10 + 5 per additional level
+      facility.personnelCapacity = 10 + ((level - 1) * 5);
+    }
+    facility.commanderAssigned = false;
+  }
+
+  // Add personnel capacity to other facilities based on their level
+  if (['research', 'powerPlant', 'radar', 'defense'].includes(type)) {
+    facility.personnelCapacity = facilityType.basePersonnel * level;
+  }
+
   return facility;
+}
+
+/**
+ * Upgrade barracks facility
+ * @param barracks The barracks facility to upgrade
+ * @param cost Optional cost of the upgrade (will be calculated if not provided)
+ * @returns Object containing the upgraded barracks facility, success status, message, and cost
+ */
+export function upgradeBarracks(
+  barracks: Facility,
+  cost?: number
+): {
+  success: boolean;
+  message: string;
+  barracks: Facility;
+  cost: number;
+} {
+  if (barracks.type !== 'barracks') {
+    return { 
+      success: false, 
+      message: 'Facility is not a barracks', 
+      barracks, 
+      cost: 0 
+    };
+  }
+  
+  const newLevel = barracks.level + 1;
+  
+  // Calculate upgrade cost if not provided
+  if (cost === undefined) {
+    const facilityType = FACILITY_TYPES[barracks.type];
+    const baseCost = facilityType.baseCost;
+    const levelMultiplier = Math.pow(facilityType.upgradeMultiplier, newLevel - 1);
+    cost = Math.floor(baseCost * levelMultiplier);
+  }
+  
+  // Calculate new personnel capacity (for the base)
+  // First level gives 10 capacity, additional levels give 5 each
+  const newPersonnelCapacity = newLevel === 1 ? 10 : 10 + ((newLevel - 1) * 5);
+  
+  // Calculate upgrade effects
+  const powerMultiplier = Math.pow(1.2, newLevel - 1);
+  const facilityType = FACILITY_TYPES.barracks;
+  
+  // Create upgraded barracks
+  const upgradedBarracks = {
+    ...barracks,
+    level: newLevel,
+    personnelCapacity: newPersonnelCapacity,
+    powerUsage: Math.floor(facilityType.basePowerUsage * powerMultiplier),
+    maintenance: Math.floor(facilityType.baseMaintenance * Math.pow(facilityType.upgradeMultiplier, newLevel - 1)),
+    // Preserve existing personnel and commander status
+    personnel: barracks.personnel || [],
+    commanderAssigned: barracks.commanderAssigned || false
+  };
+  
+  return {
+    success: true,
+    message: `Upgraded barracks to level ${newLevel}, new base personnel capacity: ${newPersonnelCapacity}`,
+    barracks: upgradedBarracks,
+    cost,
+  };
 }

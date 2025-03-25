@@ -13,10 +13,15 @@ import YearlyReviewModal from './components/YearlyReviewModal';
 import HangarModal from './components/HangarModal';
 import ConfirmationDialog from './components/ConfirmationDialog';
 import { GameState, Base, Continent, Personnel, ResearchProject, Transaction } from './types';
-import { FACILITY_TYPES } from './data/facilities';
+import { FACILITY_TYPES, upgradeBarracks } from './data/facilities';
 import { BASE_SALARIES, generatePersonnel } from './data/personnel';
 import { CONTINENTS } from './data/continents';
 import { MONTHLY_EVENTS, GameEvent, evaluateYearlyPerformance, YearlyReview } from './data/events';
+import { 
+  hasCapacityForNewFacility, 
+  canAssignPersonnelToFacility, 
+  calculateFacilityPersonnelCapacity 
+} from './data/basePersonnel';
 
 function App() {
   const [gameState, setGameState] = useState<GameState>({
@@ -176,26 +181,48 @@ function App() {
       if (!base || !facility) return prev;
 
       const facilityType = FACILITY_TYPES[facility.type];
-      const upgradeCost = Math.floor(
+      let upgradeCost = Math.floor(
         facilityType.baseCost * Math.pow(facilityType.upgradeMultiplier, facility.level)
       );
+      
+      // Different handling based on facility type
+      let updatedFacility;
+      
+      // For barracks, use the specialized upgrade function
+      if (facility.type === 'barracks') {
+        const result = upgradeBarracks(facility, upgradeCost);
+        
+        if (!result.success) {
+          alert(result.message);
+          return prev;
+        }
+        
+        updatedFacility = result.barracks;
+        upgradeCost = result.cost;
+      } else {
+        // Regular facility upgrade logic
+        const newLevel = facility.level + 1;
+        const powerMultiplier = Math.pow(1.2, newLevel - 1);
+        
+        updatedFacility = {
+          ...facility,
+          level: newLevel,
+          powerUsage: Math.floor(facilityType.basePowerUsage * powerMultiplier),
+          maintenance: Math.floor(facilityType.baseMaintenance * Math.pow(facilityType.upgradeMultiplier, newLevel - 1)),
+        };
+        
+        // Update personnel capacity for non-barracks facilities
+        if (['research', 'powerPlant', 'radar', 'defense', 'hangar'].includes(facility.type)) {
+          updatedFacility.personnelCapacity = calculateFacilityPersonnelCapacity(updatedFacility);
+        }
+      }
 
       const newBases = prev.bases.map(b => {
         if (b.id !== baseId) return b;
 
         const newFacilities = b.facilities.map(f => {
           if (f.id !== facilityId) return f;
-
-          const newLevel = f.level + 1;
-          const powerMultiplier = Math.pow(1.2, newLevel - 1);
-
-          return {
-            ...f,
-            level: newLevel,
-            powerUsage: Math.floor(facilityType.basePowerUsage * powerMultiplier),
-            personnel: [],
-            maintenance: Math.floor(facilityType.baseMaintenance * powerMultiplier),
-          };
+          return updatedFacility;
         });
 
         return {
@@ -207,7 +234,7 @@ function App() {
       addTransaction(
         upgradeCost,
         'expense',
-        `Upgrade ${facilityType.name} to level ${facility.level + 1} at ${base.name}`,
+        `Upgrade ${facilityType.name} to level ${updatedFacility.level} at ${base.name}`,
         'facilities'
       );
 
@@ -225,6 +252,13 @@ function App() {
     setGameState(prev => {
       const base = prev.bases.find(b => b.id === baseId);
       if (!base) return prev;
+
+      // Check if the base has enough available personnel capacity for a new facility
+      if (!hasCapacityForNewFacility(base)) {
+        // Display an error or notification that personnel capacity is insufficient
+        alert('Insufficient personnel capacity. Build or upgrade barracks first.');
+        return prev;
+      }
 
       const facilityTypeData = FACILITY_TYPES[facilityType];
       const cost = facilityTypeData.baseCost;
@@ -326,17 +360,49 @@ function App() {
       const personnel = prev.availablePersonnel.find(p => p.id === personnelId);
       if (!personnel) return prev;
 
+      const base = prev.bases.find(b => b.id === baseId);
+      if (!base) return prev;
+
+      const facility = base.facilities.find(f => f.id === facilityId);
+      if (!facility) return prev;
+      
+      // Check if the personnel can be assigned to this facility
+      const { canAssign, message } = canAssignPersonnelToFacility(facility, personnel);
+      
+      if (!canAssign) {
+        // Show an error message
+        alert(message);
+        return prev;
+      }
+
       const newAvailablePersonnel = prev.availablePersonnel.filter(p => p.id !== personnelId);
+      
+      // Update personnel with assignment info
+      const assignedPersonnel = {
+        ...personnel,
+        baseId,
+        assignedFacilityId: facilityId,
+        status: 'working'
+      };
+
       const newBases = prev.bases.map(base => {
         if (base.id !== baseId) return base;
 
         const newFacilities = base.facilities.map(facility => {
           if (facility.id !== facilityId) return facility;
 
-          return {
+          // Handle special commander assignment for barracks
+          const updatedFacility = {
             ...facility,
-            personnel: [...facility.personnel, { ...personnel, baseId, assignedFacilityId: facilityId }],
+            personnel: [...facility.personnel, assignedPersonnel],
           };
+
+          // If a commander is assigned to barracks, update the commanderAssigned flag
+          if (facility.type === 'barracks' && personnel.role === 'commander') {
+            updatedFacility.commanderAssigned = true;
+          }
+
+          return updatedFacility;
         });
 
         return {

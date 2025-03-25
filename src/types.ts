@@ -169,6 +169,8 @@ export interface Facility {
   vehicleCapacity?: number;  // Maximum number of vehicles the hangar can hold
   maintenanceBays?: number;  // Number of simultaneous maintenance operations
   repairSpeed?: number;      // Multiplier for repair speed
+  personnelCapacity?: number; // Maximum number of personnel that can be assigned to this facility
+  commanderAssigned?: boolean; // Whether a commander is assigned to this barracks
   maintenanceQueue?: {       // Vehicles in maintenance queue
     vehicleId: string;
     startTime: Date;
@@ -196,6 +198,8 @@ export interface FacilityType {
   vehicleCapacityMultiplier?: number;
   maintenanceBays?: number;
   repairSpeed?: number;
+  personnelCapacity?: number; // Base capacity for personnel
+  personnelCapacityMultiplier?: number; // Multiplier for personnel capacity per level
 }
 
 export interface UFO {
