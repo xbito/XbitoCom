@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { Base, Facility, Vehicle, VehicleType, VehicleStatus } from '../types';
-import { getHangarStatusReport, addVehicleToHangar } from '../data/hangar';
 import { getVariantsByType, VEHICLE_TYPES, generateVehicle } from '../data/vehicles';
 import BaseModal from './BaseModal';
 import VehicleDetailModal from './VehicleDetailModal';
@@ -31,27 +30,35 @@ const HangarModal: React.FC<HangarModalProps> = ({
   const [activeTab, setActiveTab] = useState<'vehicles' | 'maintenance' | 'purchase'>('purchase');
   const [statusReport, setStatusReport] = useState<any>(null);
 
+  // Initialize the component and status report
   useEffect(() => {
-    // Find first hangar facility in the base
-    if (isOpen && base.facilities) {
+    const initializeHangar = async () => {
+      if (!isOpen || !base?.facilities) return;
+
+      // Find the hangar facility in the base
       const hangar = base.facilities.find(f => f.type === 'hangar');
-      if (hangar) {
-        // Ensure the hangar has a valid vehicle capacity
-        if (!hangar.vehicleCapacity) {
-          hangar.vehicleCapacity = 3; // Base capacity from FACILITY_TYPES
-        }
+      if (!hangar) return;
+
+      // Import hangar helpers dynamically
+      const hangarHelpers = await import('../data/hangar');
+
+      try {
+        // Force initialize the status report immediately
+        const report = hangarHelpers.getHangarStatusReport(hangar);
         
         setSelectedFacility(hangar);
-        
-        // Calculate and set the status report immediately
-        const report = getHangarStatusReport(hangar);
         setStatusReport(report);
         
-        // Set default tab to vehicles only if there are vehicles
-        setActiveTab(base.vehicles.length > 0 ? 'vehicles' : 'purchase');
+        // Set a sensible default tab based on whether there are vehicles
+        const hasVehicles = (hangar.vehicles?.length || 0) > 0;
+        setActiveTab(hasVehicles ? 'vehicles' : 'purchase');
+      } catch (error) {
+        console.error("Error initializing hangar:", error);
       }
-    }
-  }, [isOpen, base.facilities]);
+    };
+
+    initializeHangar();
+  }, [isOpen, base]);
 
   // Handle selecting a vehicle
   const handleSelectVehicle = (vehicle: Vehicle) => {
@@ -95,7 +102,7 @@ const HangarModal: React.FC<HangarModalProps> = ({
     
     // Update the status report whenever the hangar changes
     if (updatedHangar.type === 'hangar') {
-      const newReport = getHangarStatusReport(updatedHangar);
+      const newReport = getVariantsByType(updatedHangar.type);
       setStatusReport(newReport);
     }
   };
@@ -159,12 +166,23 @@ const HangarModal: React.FC<HangarModalProps> = ({
     if (!selectedFacility) return;
     
     const canAfford = availableFunds >= variant.baseCost;
-    const hasCapacity = statusReport && statusReport.capacity.available > 0;
     
-    if (!canAfford || !hasCapacity) return;
+    // Make sure we have the latest status report before checking capacity
+    const currentReport = getVariantsByType(selectedFacility);
+   
+    setStatusReport(currentReport);
+    
+    const hasCapacity = currentReport && currentReport.capacity.available > 0;
+    
+    if (!canAfford || !hasCapacity) {
+      console.log(`Purchase blocked: ${!canAfford ? 'Cannot afford' : 'No capacity'}`);
+      return;
+    }
 
     const newVehicle = generateVehicle(variantKey, base.id);
     const result = addVehicleToHangar(selectedFacility, newVehicle);
+    
+    console.log(`Add vehicle result:`, result);
     
     if (result.success) {
       // Deduct funds first
@@ -217,7 +235,14 @@ const HangarModal: React.FC<HangarModalProps> = ({
                   ? 'bg-blue-500 text-white' 
                   : 'text-slate-400 hover:text-white hover:bg-slate-700'
               }`}
-              onClick={() => setActiveTab('purchase')}
+              onClick={() => {
+                setActiveTab('purchase');
+                // Refresh the status report when switching to purchase tab
+                if (selectedFacility && selectedFacility.type === 'hangar') {
+                  const freshReport = getVariantsByType(selectedFacility);
+                  setStatusReport(freshReport);
+                }
+              }}
             >
               Purchase
             </button>

@@ -63,6 +63,7 @@ export function addVehicleToHangar(hangar: Facility, vehicle: Vehicle): { succes
 
   // Check if the hangar is at capacity
   if (hangar.vehicles.length >= (hangar.vehicleCapacity || 0)) {
+    console.log('Adding vehicle REJECTED: Hangar at maximum capacity');
     return { 
       success: false, 
       message: 'Hangar is at maximum capacity', 
@@ -72,6 +73,7 @@ export function addVehicleToHangar(hangar: Facility, vehicle: Vehicle): { succes
 
   // Add the vehicle to the hangar
   hangar.vehicles.push(vehicle);
+  console.log(`Vehicle added successfully, new count: ${hangar.vehicles.length}`);
 
   return { 
     success: true, 
@@ -238,11 +240,16 @@ export function getHangarStatusReport(hangar: Facility): {
   // Process the maintenance queue to update progress
   const queue = processMaintenanceQueue(hangar);
   
+  // DEBUG: Log hangar capacity details
+  const totalCapacity = hangar.vehicleCapacity || 0;
+  const usedCapacity = hangar.vehicles?.length || 0;
+  const availableCapacity = totalCapacity - usedCapacity;
+
   return {
     capacity: {
-      total: hangar.vehicleCapacity || 0,
-      used: hangar.vehicles?.length || 0,
-      available: (hangar.vehicleCapacity || 0) - (hangar.vehicles?.length || 0)
+      total: totalCapacity,
+      used: usedCapacity,
+      available: availableCapacity
     },
     maintenance: {
       bays: maintenanceBays,

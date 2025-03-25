@@ -229,10 +229,15 @@ function App() {
       const facilityTypeData = FACILITY_TYPES[facilityType];
       const cost = facilityTypeData.baseCost;
 
-      const newBases = prev.bases.map(b => {
-        if (b.id !== baseId) return b;
-
-        const newFacility = {
+      // Create facility based on type
+      const createNewFacility = async () => {
+        if (facilityType === 'hangar') {
+          // Use dynamic import instead of require
+          const { createFacility } = await import('./data/facilities');
+          return createFacility(facilityType, 1);
+        }
+        
+        return {
           id: crypto.randomUUID(),
           type: facilityType as any,
           level: 1,
@@ -240,6 +245,45 @@ function App() {
           powerUsage: facilityTypeData.basePowerUsage,
           maintenance: facilityTypeData.baseMaintenance,
         };
+      };
+
+      // Create the facility
+      let newFacility;
+      if (facilityType === 'hangar') {
+        // For hangars, initialize with proper defaults
+        const hangarType = FACILITY_TYPES.hangar;
+        newFacility = {
+          id: crypto.randomUUID(),
+          type: 'hangar' as const,
+          level: 1,
+          personnel: [],
+          powerUsage: hangarType.basePowerUsage,
+          maintenance: hangarType.baseMaintenance,
+          vehicles: [],
+          vehicleCapacity: hangarType.vehicleCapacity,
+          maintenanceBays: hangarType.maintenanceBays,
+          repairSpeed: hangarType.repairSpeed,
+          maintenanceQueue: [],
+          upgradeLevel: {
+            equipmentQuality: 1,
+            baySize: 1,
+            crewTraining: 1
+          }
+        };
+      } else {
+        // Regular facility
+        newFacility = {
+          id: crypto.randomUUID(),
+          type: facilityType as any,
+          level: 1,
+          personnel: [],
+          powerUsage: facilityTypeData.basePowerUsage,
+          maintenance: facilityTypeData.baseMaintenance,
+        };
+      }
+
+      const newBases = prev.bases.map(b => {
+        if (b.id !== baseId) return b;
 
         return {
           ...b,
