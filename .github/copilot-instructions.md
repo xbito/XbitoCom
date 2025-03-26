@@ -1,4 +1,6 @@
 This is a React application built with Vite, we can only use ES module imports instead of CommonJS require statements. Avoid require.
+Use lucide-react icons to provide some iconography to the app.
+
 Use simple control flows, no recursion.
 All loops must have a fixed upper bound.
 Keep functions under 60 lines.
