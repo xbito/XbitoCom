@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { X, Building2, Zap, Plus, ChevronUp, MapPin, Plane, Users } from 'lucide-react';
 import type { Base, Facility, Continent } from '../types';
 import { FACILITY_TYPES } from '../data/facilities';
+import { calculateBasePersonnelCapacity, calculateUsedPersonnelCapacity } from '../data/basePersonnel';
+import { createFacility } from '../data/facilities';
 
 interface BaseModalProps {
   onClose: () => void;
@@ -71,24 +73,6 @@ const BaseModal: React.FC<BaseModalProps> = ({
   const [facilities, setFacilities] = useState(existingBase?.facilities || []);
 
   const baseCost = 2000000; // $2M for a new base
-
-  // Calculate personnel capacity based on facilities
-  const calculatePersonnelCapacity = (baseOrFacilities: Base | Facility[]) => {
-    const facilitiesList = 'facilities' in baseOrFacilities 
-      ? baseOrFacilities.facilities 
-      : baseOrFacilities;
-    
-    return facilitiesList.reduce((total, facility) => {
-      // Special handling for barracks - they provide base personnel capacity
-      if (facility.type === 'barracks') {
-        // First level gives 15 capacity, additional levels give 10 each
-        return total + (facility.level === 1 ? 15 : 15 + ((facility.level - 1) * 10));
-      }
-      
-      // For other facilities, personnel capacity is just how many can be assigned there
-      return total;
-    }, 0);
-  };
   
   // Calculate continent personnel bonus
   const getPersonnelMultiplier = () => {
@@ -99,7 +83,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
   const getInitialPersonnelCapacity = () => {
     // Initial facilities include a level 1 barracks
     // Level 1 barracks provides 15 personnel capacity
-    const baseCapacity = 15; // Changed from 10 to 15
+    const baseCapacity = 15;
     
     // Apply continent multiplier
     return Math.round(baseCapacity * getPersonnelMultiplier());
@@ -122,23 +106,8 @@ const BaseModal: React.FC<BaseModalProps> = ({
       continent: selectedContinent,
       maxSize: selectedContinent.maxBaseSize,
       facilities: [
-        {
-          id: crypto.randomUUID(),
-          type: 'powerPlant',
-          level: 1,
-          personnel: [],
-          powerUsage: FACILITY_TYPES.powerPlant.basePowerUsage,
-          maintenance: FACILITY_TYPES.powerPlant.baseMaintenance,
-        },
-        {
-          id: crypto.randomUUID(),
-          type: 'barracks',
-          level: 1,
-          personnel: [],
-          powerUsage: FACILITY_TYPES.barracks.basePowerUsage,
-          maintenance: FACILITY_TYPES.barracks.baseMaintenance,
-        },
-        // Radar facility removed from default setup
+        createFacility('powerPlant'),
+        createFacility('barracks')
       ],
       vehicles: [],
       radarRange: 0, // No radar range since there's no radar
@@ -174,14 +143,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
     setShowFacilitySelect(false);
     
     // Update local state to show new facility immediately
-    const newFacility = {
-      id: crypto.randomUUID(),
-      type: facilityType as any,
-      level: 1,
-      personnel: [],
-      powerUsage: FACILITY_TYPES[facilityType].basePowerUsage,
-      maintenance: FACILITY_TYPES[facilityType].baseMaintenance,
-    };
+    const newFacility = createFacility(facilityType);
     setFacilities([...facilities, newFacility]);
   };
 
@@ -288,12 +250,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
                   <p className="text-sm text-slate-400">Base Capacity</p>
                   {(() => {
                     // Calculate total base capacity from all barracks
-                    const totalBaseCapacity = existingBase.facilities
-                      .filter(f => f.type === 'barracks')
-                      .reduce((total, barracks) => {
-                        const level = barracks.level;
-                        return total + (level === 1 ? 10 : 10 + ((level - 1) * 5));
-                      }, 0);
+                    const totalBaseCapacity = calculateBasePersonnelCapacity(existingBase);
                     return (
                       <p className="text-lg font-bold">{totalBaseCapacity}</p>
                     );
@@ -303,13 +260,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
                   <p className="text-sm text-slate-400">Personnel Assigned</p>
                   <p className="text-lg font-bold">
                     {(() => {
-                      // Count all personnel assigned to base and facilities
-                      const basePersonnel = existingBase.personnel?.length || 0;
-                      const facilityPersonnel = existingBase.facilities.reduce(
-                        (total, facility) => total + (facility.personnel?.length || 0),
-                        0
-                      );
-                      return basePersonnel + facilityPersonnel;
+                      return calculateUsedPersonnelCapacity(existingBase);
                     })()}
                   </p>
                 </div>
@@ -317,17 +268,8 @@ const BaseModal: React.FC<BaseModalProps> = ({
                   <p className="text-sm text-slate-400">Available Slots</p>
                   <p className="text-lg font-bold">
                     {(() => {
-                      const totalCapacity = existingBase.facilities
-                        .filter(f => f.type === 'barracks')
-                        .reduce((total, barracks) => {
-                          const level = barracks.level;
-                          return total + (level === 1 ? 10 : 10 + ((level - 1) * 5));
-                        }, 0);
-                      const totalAssigned = existingBase.personnel?.length || 0 +
-                        existingBase.facilities.reduce(
-                          (total, facility) => total + (facility.personnel?.length || 0),
-                          0
-                        );
+                      const totalCapacity = calculateBasePersonnelCapacity(existingBase);
+                      const totalAssigned = calculateUsedPersonnelCapacity(existingBase);
                       return Math.max(0, totalCapacity - totalAssigned);
                     })()}
                   </p>
