@@ -168,9 +168,9 @@ export function calculateFacilityPersonnelCapacity(facility: Facility): number {
   
   switch (facility.type) {
     case 'barracks':
-      // First level barracks gives 10 personnel capacity
-      // Each additional level gives 5 more capacity
-      return facility.level === 1 ? 10 : 10 + ((facility.level - 1) * 5);
+      // First level barracks gives 15 personnel capacity
+      // Each additional level gives 10 more capacity
+      return facility.level === 1 ? 15 : 15 + ((facility.level - 1) * 10);
       
     case 'research':
     case 'powerPlant':
@@ -185,7 +185,7 @@ export function calculateFacilityPersonnelCapacity(facility: Facility): number {
         powerPlant: 5,
         radar: 3,
         defense: 6,
-        hangar: 8
+        hangar: 5 // Changed from 8 to 5 as per requirements
       }[facilityType] || 3;
       
       return baseCapacity * facility.level;

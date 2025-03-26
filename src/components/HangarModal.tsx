@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Base, Facility, Vehicle, VehicleType, VehicleStatus } from '../types';
 import { VEHICLE_TYPES, generateVehicle } from '../data/vehicles';
 import BaseModal from './BaseModal';
+import ConfirmationDialog from './ConfirmationDialog';
 import VehicleDetailModal from './VehicleDetailModal';
 import { Shield, Plane, Navigation, DollarSign } from 'lucide-react';
 
@@ -28,6 +29,11 @@ const HangarModal: React.FC<HangarModalProps> = ({
   const [selectedFacility, setSelectedFacility] = useState<Facility | null>(null);
   const [vehicleDetailOpen, setVehicleDetailOpen] = useState<boolean>(false);
   const [activeTab, setActiveTab] = useState<'vehicles' | 'purchase'>('purchase');
+  const [showPurchaseConfirmation, setShowPurchaseConfirmation] = useState(false);
+  const [pendingPurchase, setPendingPurchase] = useState<{
+    variantKey: string;
+    variant: typeof VEHICLE_TYPES[string];
+  } | null>(null);
 
   // Initialize when modal opens
   useEffect(() => {
@@ -45,11 +51,16 @@ const HangarModal: React.FC<HangarModalProps> = ({
 
   // Update the base after vehicle changes
   const handleUpdateVehicle = (updatedVehicle: Vehicle) => {
-    const updatedVehicles = base.vehicles.map(v => 
-      v.id === updatedVehicle.id ? updatedVehicle : v);
-    
-    const updatedBase = { ...base, vehicles: updatedVehicles };
-    updateBase(updatedBase);
+    try {
+      const updatedVehicles = base.vehicles.map(v => 
+        v.id === updatedVehicle.id ? updatedVehicle : v);
+      
+      const updatedBase = { ...base, vehicles: updatedVehicles };
+      updateBase(updatedBase);
+    } catch (error) {
+      console.error('Failed to update vehicle:', error);
+      alert('An error occurred while updating the vehicle');
+    }
   };
 
   // Get available capacity
@@ -88,33 +99,58 @@ const HangarModal: React.FC<HangarModalProps> = ({
 
   // Purchase vehicle handler
   const handlePurchaseVehicle = (variantKey: string, variant: typeof VEHICLE_TYPES[string]) => {
-    if (!selectedFacility) return;
+    if (!selectedFacility) {
+      alert('Error: No hangar facility found');
+      return;
+    }
     
     const canAfford = availableFunds >= variant.baseCost;
     const hasCapacity = getAvailableCapacity() > 0;
     
-    if (!canAfford || !hasCapacity) {
+    if (!canAfford) {
+      alert('Insufficient funds to purchase this vehicle');
       return;
     }
 
-    const newVehicle = generateVehicle(variantKey, base.id);
-    const updatedVehicles = [...base.vehicles, newVehicle];
-    
-    // Update base and funds
-    updateFunds(availableFunds - variant.baseCost);
-    updateBase({
-      ...base,
-      vehicles: updatedVehicles
-    });
-    
-    // Switch to vehicles tab if this is the first vehicle
-    if (base.vehicles.length === 0) {
-      setActiveTab('vehicles');
+    if (!hasCapacity) {
+      alert('No available space in hangar');
+      return;
     }
+
+    setPendingPurchase({ variantKey, variant });
+    setShowPurchaseConfirmation(true);
+  };
+
+  // Execute the purchase after confirmation
+  const handleConfirmPurchase = () => {
+    if (!pendingPurchase || !selectedFacility) return;
+
+    try {
+      const newVehicle = generateVehicle(pendingPurchase.variantKey, base.id);
+      const updatedVehicles = [...base.vehicles, newVehicle];
+      
+      // Update base and funds
+      updateFunds(availableFunds - pendingPurchase.variant.baseCost);
+      updateBase({
+        ...base,
+        vehicles: updatedVehicles
+      });
+      
+      // Switch to vehicles tab if this is the first vehicle
+      if (base.vehicles.length === 0) {
+        setActiveTab('vehicles');
+      }
+    } catch (error) {
+      console.error('Failed to purchase vehicle:', error);
+      alert('An error occurred while purchasing the vehicle');
+    }
+
+    setShowPurchaseConfirmation(false);
+    setPendingPurchase(null);
   };
 
   return (
-    <div>
+    <>
       <BaseModal
         isOpen={isOpen}
         onClose={onClose}
@@ -295,7 +331,23 @@ const HangarModal: React.FC<HangarModalProps> = ({
           }}
         />
       )}
-    </div>
+
+      <ConfirmationDialog
+        isOpen={showPurchaseConfirmation}
+        onClose={() => {
+          setShowPurchaseConfirmation(false);
+          setPendingPurchase(null);
+        }}
+        onConfirm={handleConfirmPurchase}
+        title="Confirm Vehicle Purchase"
+        message={
+          pendingPurchase
+            ? `Are you sure you want to purchase a ${pendingPurchase.variant.name} for $${pendingPurchase.variant.baseCost.toLocaleString()}?`
+            : ''
+        }
+        confirmText="Purchase"
+      />
+    </>
   );
 };
 

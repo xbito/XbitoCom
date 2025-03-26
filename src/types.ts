@@ -127,8 +127,6 @@ export interface FacilityType {
   size: number;
   vehicleCapacity?: number;
   vehicleCapacityMultiplier?: number;
-  maintenanceBays?: number;
-  repairSpeed?: number;
   personnelCapacity?: number; // Base capacity for personnel
   personnelCapacityMultiplier?: number; // Multiplier for personnel capacity per level
 }

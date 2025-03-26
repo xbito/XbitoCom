@@ -33,23 +33,21 @@ export const FACILITY_TYPES: Record<FacilityType['type'], FacilityType> = {
     baseMaintenance: 5000,
     upgradeMultiplier: 1.3,
     size: 2,
-    personnelCapacity: 10, // Level 1 barracks provides 10 base personnel capacity
+    personnelCapacity: 15, // Changed from 10 to 15
     personnelCapacityMultiplier: 1.5, // Each level increases base capacity by 50%
   },
   hangar: {
     type: 'hangar',
     name: 'Aircraft Hangar',
-    description: 'Houses and maintains aircraft for interception and transport missions',
+    description: 'Houses and manages aircraft for interception and transport missions',
     baseCost: 1500000,
-    basePersonnel: 8,
+    basePersonnel: 5,
     basePowerUsage: 30,
     baseMaintenance: 50000,
     upgradeMultiplier: 1.8,
     size: 4,
     vehicleCapacity: 3,
     vehicleCapacityMultiplier: 1.5,
-    maintenanceBays: 1,
-    repairSpeed: 1.0,
   },
   radar: {
     type: 'radar',
@@ -94,25 +92,17 @@ export function createFacility(type: FacilityType['type'], level: number = 1): F
   if (type === 'hangar') {
     facility.vehicles = [];
     facility.vehicleCapacity = Math.floor(facilityType.vehicleCapacity! * Math.pow(facilityType.vehicleCapacityMultiplier!, level - 1));
-    facility.maintenanceBays = facilityType.maintenanceBays! * level;
-    facility.repairSpeed = facilityType.repairSpeed! * (1 + (level - 1) * 0.2);
-    facility.maintenanceQueue = [];
-    facility.upgradeLevel = {
-      equipmentQuality: 1,
-      baySize: 1,
-      crewTraining: 1
-    };
   }
 
   // Add barracks-specific properties
   if (type === 'barracks') {
-    // First level barracks gives 10 personnel capacity
-    // Each subsequent level adds 5 personnel capacity
+    // First level barracks gives 15 personnel capacity
+    // Each subsequent level adds 10 personnel capacity
     if (level === 1) {
       facility.personnelCapacity = facilityType.personnelCapacity;
     } else {
-      // Base capacity of 10 + 5 per additional level
-      facility.personnelCapacity = 10 + ((level - 1) * 5);
+      // Base capacity of 15 + 10 per additional level
+      facility.personnelCapacity = 15 + ((level - 1) * 10);
     }
     facility.commanderAssigned = false;
   }
@@ -160,8 +150,8 @@ export function upgradeBarracks(
   }
   
   // Calculate new personnel capacity (for the base)
-  // First level gives 10 capacity, additional levels give 5 each
-  const newPersonnelCapacity = newLevel === 1 ? 10 : 10 + ((newLevel - 1) * 5);
+  // First level gives 15 capacity, additional levels give 10 each
+  const newPersonnelCapacity = newLevel === 1 ? 15 : 15 + ((newLevel - 1) * 10);
   
   // Calculate upgrade effects
   const powerMultiplier = Math.pow(1.2, newLevel - 1);

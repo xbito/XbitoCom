@@ -81,8 +81,8 @@ const BaseModal: React.FC<BaseModalProps> = ({
     return facilitiesList.reduce((total, facility) => {
       // Special handling for barracks - they provide base personnel capacity
       if (facility.type === 'barracks') {
-        // First level gives 10 capacity, additional levels give 5 each
-        return total + (facility.level === 1 ? 10 : 10 + ((facility.level - 1) * 5));
+        // First level gives 15 capacity, additional levels give 10 each
+        return total + (facility.level === 1 ? 15 : 15 + ((facility.level - 1) * 10));
       }
       
       // For other facilities, personnel capacity is just how many can be assigned there
@@ -98,8 +98,8 @@ const BaseModal: React.FC<BaseModalProps> = ({
   // For new bases, calculate initial personnel capacity
   const getInitialPersonnelCapacity = () => {
     // Initial facilities include a level 1 barracks
-    // Level 1 barracks provides 10 personnel capacity
-    const baseCapacity = 10; // Fixed value for Level 1 barracks
+    // Level 1 barracks provides 15 personnel capacity
+    const baseCapacity = 15; // Changed from 10 to 15
     
     // Apply continent multiplier
     return Math.round(baseCapacity * getPersonnelMultiplier());
@@ -461,7 +461,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
                           </div>
                           {facility.type === 'barracks' && (
                             <div className="text-sm text-green-400 mt-1">
-                              Base Personnel Capacity: {facility.level === 1 ? 10 : 10 + ((facility.level - 1) * 5)}
+                              Base Personnel Capacity: {facility.level === 1 ? 15 : 15 + ((facility.level - 1) * 10)}
                             </div>
                           )}
                         </div>
