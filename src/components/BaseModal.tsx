@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Building2, Zap, Plus, ChevronUp, MapPin, Plane, Users, DollarSign } from 'lucide-react';
+import { X, Zap, Plus, ChevronUp, Plane, Users, MapPin, HardHat, Construction, BrickWall, LandPlot } from 'lucide-react';
 import type { Base, Facility, Continent } from '../types';
 import { FACILITY_TYPES } from '../data/facilities';
 import { calculateBasePersonnelCapacity, calculateUsedPersonnelCapacity } from '../data/basePersonnel';
@@ -12,7 +12,6 @@ interface BaseModalProps {
   onAddFacility?: (baseId: string, facilityType: string) => void;
   onOpenHangar?: (base: Base) => void;
   existingBase?: Base | null;
-  availablePersonnel?: number;
   availableFunds?: number;
   selectedContinent?: Continent | null;
   isOpen?: boolean;
@@ -28,7 +27,6 @@ const BaseModal: React.FC<BaseModalProps> = ({
   onAddFacility,
   onOpenHangar,
   existingBase,
-  availablePersonnel = 0,
   availableFunds = 0,
   selectedContinent,
   isOpen = true,
@@ -79,10 +77,10 @@ const BaseModal: React.FC<BaseModalProps> = ({
     return selectedContinent?.personnelMultiplier || 1;
   };
 
-  // For new bases, calculate initial personnel capacity
+  // For new bases, calculate initial housing capacity from barracks
   const getInitialPersonnelCapacity = () => {
     // Initial facilities include a level 1 barracks
-    // Level 1 barracks provides 15 personnel capacity
+    // Level 1 barracks provides 15 personnel housing capacity
     const baseCapacity = 15;
     
     // Apply continent multiplier
@@ -142,9 +140,26 @@ const BaseModal: React.FC<BaseModalProps> = ({
     onAddFacility(existingBase.id, facilityType);
     setShowFacilitySelect(false);
     
-    // Update local state to show new facility immediately
+    // Create the new facility
     const newFacility = createFacility(facilityType);
-    setFacilities([...facilities, newFacility]);
+    const updatedFacilities = [...facilities, newFacility];
+    setFacilities(updatedFacilities);
+
+    // Update the base's state to reflect new facility immediately
+    const updatedBase: Base = {
+      ...existingBase,
+      facilities: updatedFacilities,
+      // Recalculate personnel capacity if it's a barracks
+      personnelCapacity: newFacility.type === 'barracks' 
+        ? calculateBasePersonnelCapacity({ ...existingBase, facilities: updatedFacilities })
+        : existingBase.personnelCapacity
+    };
+
+    // Update other base properties based on the new facility
+    if (newFacility.powerUsage) {
+      updatedBase.power = calculatePowerStatus(updatedBase).generation;
+      updatedBase.powerUsage = calculatePowerStatus(updatedBase).usage;
+    }
   };
 
   const calculatePowerStatus = (base: Base) => {
@@ -178,7 +193,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
         </button>
 
         <div className="flex items-center gap-3 mb-6">
-          <Building2 className="text-blue-400" size={24} />
+          <HardHat className="text-blue-400" size={24} />
           <div>
             <h2 className="text-2xl font-bold">
               {existingBase ? `${existingBase.name} - Level ${existingBase.level}` : 'Create New Base'}
@@ -224,7 +239,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
             </div>
 
             <div className="mb-4 bg-slate-700 p-4 rounded-lg">
-              <h3 className="font-semibold mb-2">Base Capacity</h3>
+              <h3 className="font-semibold mb-2">Base Land Usage</h3>
               <div className="flex items-center gap-2">
                 <div className="flex-1 h-2 bg-slate-600 rounded-full overflow-hidden">
                   <div 
@@ -235,29 +250,31 @@ const BaseModal: React.FC<BaseModalProps> = ({
                   />
                 </div>
                 <span className="text-sm text-slate-400">
-                  {calculateBaseSize(existingBase)} / {existingBase.maxSize}
+                  {calculateBaseSize(existingBase)} / {existingBase.maxSize} facility spaces
                 </span>
               </div>
+              <p className="text-xs text-slate-400 mt-1">
+                Each facility requires space to be constructed
+              </p>
             </div>
 
             <div className="mb-4 bg-slate-700 p-4 rounded-lg">
               <div className="flex items-center gap-2 mb-2">
                 <Users className="text-blue-400" size={20} />
-                <h3 className="font-semibold">Base Personnel</h3>
+                <h3 className="font-semibold">Personnel Housing</h3>
               </div>
               <div className="grid grid-cols-3 gap-4 text-center">
                 <div>
-                  <p className="text-sm text-slate-400">Base Capacity</p>
+                  <p className="text-sm text-slate-400">Housing Capacity</p>
                   {(() => {
-                    // Calculate total base capacity from all barracks
-                    const totalBaseCapacity = calculateBasePersonnelCapacity(existingBase);
+                    const totalBarracksCapacity = calculateBasePersonnelCapacity(existingBase);
                     return (
-                      <p className="text-lg font-bold">{totalBaseCapacity}</p>
+                      <p className="text-lg font-bold">{totalBarracksCapacity}</p>
                     );
                   })()}
                 </div>
                 <div>
-                  <p className="text-sm text-slate-400">Personnel Assigned</p>
+                  <p className="text-sm text-slate-400">Personnel Housed</p>
                   <p className="text-lg font-bold">
                     {(() => {
                       return calculateUsedPersonnelCapacity(existingBase);
@@ -265,7 +282,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
                   </p>
                 </div>
                 <div>
-                  <p className="text-sm text-slate-400">Available Slots</p>
+                  <p className="text-sm text-slate-400">Available Bunks</p>
                   <p className="text-lg font-bold">
                     {(() => {
                       const totalCapacity = calculateBasePersonnelCapacity(existingBase);
@@ -297,7 +314,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
 
                 <div className="bg-slate-700 p-4 rounded-lg">
                   <h3 className="font-medium mb-3 flex items-center gap-2">
-                    <Building2 size={16} className="text-blue-400" />
+                    <BrickWall size={16} className="text-blue-400" />
                     Initial Facilities
                   </h3>
                   <div className="space-y-2 mb-4">
@@ -317,10 +334,10 @@ const BaseModal: React.FC<BaseModalProps> = ({
 
                 <div className="bg-slate-700 p-4 rounded-lg">
                   <h3 className="font-medium mb-3 flex items-center gap-2">
-                    <DollarSign size={16} className="text-green-400" />
+                    <Construction size={16} className="text-green-400" />
                     Construction Details
                   </h3>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-3 gap-4">
                     <div>
                       <div className="text-sm text-slate-400 mb-1">Base Cost</div>
                       <div className="text-xl font-bold text-green-400">
@@ -331,10 +348,19 @@ const BaseModal: React.FC<BaseModalProps> = ({
                       </div>
                     </div>
                     <div>
-                      <div className="text-sm text-slate-400 mb-1">Initial Personnel Capacity</div>
+                      <div className="text-sm text-slate-400 mb-1">Initial Land Usage</div>
+                      <div className="text-xl font-bold">
+                        2 / {selectedContinent?.maxBaseSize ?? 0} spaces
+                      </div>
+                      <div className="text-xs text-slate-400 mt-1">
+                        Power Plant (1) + Barracks (1)
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-slate-400 mb-1">Initial Housing Capacity</div>
                       <div className="text-xl font-bold">{getInitialPersonnelCapacity()}</div>
                       <div className="text-xs text-slate-400 mt-1">
-                        Available Personnel: {availablePersonnel}
+                        From Level 1 Barracks
                       </div>
                     </div>
                   </div>
@@ -343,13 +369,13 @@ const BaseModal: React.FC<BaseModalProps> = ({
                 {selectedContinent && (
                   <div className="bg-slate-700 p-4 rounded-lg">
                     <h3 className="font-medium mb-3 flex items-center gap-2">
-                      <MapPin size={16} className="text-red-400" />
+                      <LandPlot size={16} className="text-red-400" />
                       Regional Advantages: {selectedContinent.name}
                     </h3>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between items-center">
-                        <span>Maximum Base Size</span>
-                        <span className="text-blue-400">{selectedContinent.maxBaseSize} facilities</span>
+                        <span>Maximum Land Usage</span>
+                        <span className="text-blue-400">{selectedContinent.maxBaseSize} facility spaces</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span>Personnel Efficiency</span>
@@ -437,7 +463,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
                           </div>
                           {facility.type === 'barracks' && (
                             <div className="text-sm text-green-400 mt-1">
-                              Base Personnel Capacity: {facility.level === 1 ? 15 : 15 + ((facility.level - 1) * 10)}
+                              Housing Capacity: {facility.level === 1 ? 15 : 15 + ((facility.level - 1) * 10)} personnel
                             </div>
                           )}
                         </div>

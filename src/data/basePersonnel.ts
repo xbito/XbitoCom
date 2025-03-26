@@ -2,18 +2,18 @@ import { Base, Facility, Personnel, PersonnelRole } from '../types';
 import { validate } from '../utils/validation';
 
 /**
- * Calculate the total personnel capacity of a base
+ * Calculate the total barracks capacity of a base
  * @param base The base to calculate capacity for
- * @returns The total personnel capacity
+ * @returns The total personnel housing capacity from all barracks
  */
 export function calculateBasePersonnelCapacity(base: Base): number {
   validate(base, 'Base must be defined');
   
-  // Only barracks contribute to base personnel capacity
+  // Only barracks contribute to personnel housing capacity
   const barracks = base.facilities.filter(f => f.type === 'barracks');
   
   if (barracks.length === 0) {
-    return 0; // No barracks means no personnel capacity
+    return 0; // No barracks means no housing capacity
   }
   
   // Sum up the capacity of all barracks
@@ -25,9 +25,9 @@ export function calculateBasePersonnelCapacity(base: Base): number {
 }
 
 /**
- * Calculate the used personnel capacity of a base
- * @param base The base to calculate used capacity for
- * @returns The used personnel capacity
+ * Calculate the number of personnel currently housed at a base
+ * @param base The base to calculate for
+ * @returns The number of personnel currently housed at the base
  */
 export function calculateUsedPersonnelCapacity(base: Base): number {
   validate(base, 'Base must be defined');
@@ -44,9 +44,9 @@ export function calculateUsedPersonnelCapacity(base: Base): number {
 }
 
 /**
- * Calculate the available personnel capacity of a base
- * @param base The base to calculate available capacity for
- * @returns The available personnel capacity
+ * Calculate the remaining barracks capacity at a base
+ * @param base The base to calculate for
+ * @returns The number of additional personnel that can be housed
  */
 export function calculateAvailablePersonnelCapacity(base: Base): number {
   const totalCapacity = calculateBasePersonnelCapacity(base);

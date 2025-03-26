@@ -1,16 +1,16 @@
 import { FacilityType, Facility } from '../types';
 
-export const FACILITY_TYPES: Record<FacilityType['type'], FacilityType> = {
+export const FACILITY_TYPES: Record<string, FacilityType> = {
   powerPlant: {
     type: 'powerPlant',
     name: 'Power Plant',
     description: 'Generates power for base operations',
-    baseCost: 500000,
+    baseCost: 400000,
     basePersonnel: 5,
     basePowerUsage: -50, // Negative because it generates power
     baseMaintenance: 10000,
     upgradeMultiplier: 1.5,
-    size: 2,
+    size: 2, // Land usage in facility spaces
   },
   research: {
     type: 'research',
@@ -26,15 +26,15 @@ export const FACILITY_TYPES: Record<FacilityType['type'], FacilityType> = {
   barracks: {
     type: 'barracks',
     name: 'Barracks',
-    description: 'Houses and trains personnel. Can be assigned one commander to boost effectiveness.',
+    description: 'Houses and manages base personnel',
     baseCost: 300000,
-    basePersonnel: 1, // Only 1 personnel slot for commander
+    basePersonnel: 1, // Staff required to operate the facility
     basePowerUsage: 10,
     baseMaintenance: 5000,
     upgradeMultiplier: 1.3,
-    size: 2,
-    personnelCapacity: 15, // Changed from 10 to 15
-    personnelCapacityMultiplier: 1.5, // Each level increases base capacity by 50%
+    size: 2, // Land usage in facility spaces
+    personnelCapacity: 15, // Initial barracks capacity for housing personnel
+    personnelCapacityMultiplier: 1.5,
   },
   hangar: {
     type: 'hangar',
@@ -47,7 +47,7 @@ export const FACILITY_TYPES: Record<FacilityType['type'], FacilityType> = {
     upgradeMultiplier: 1.8,
     size: 4,
     vehicleCapacity: 3,
-    vehicleCapacityMultiplier: 1.5,
+    vehicleCapacityMultiplier: 1.5
   },
   radar: {
     type: 'radar',
@@ -171,7 +171,7 @@ export function upgradeBarracks(
   
   return {
     success: true,
-    message: `Upgraded barracks to level ${newLevel}, new base personnel capacity: ${newPersonnelCapacity}`,
+    message: `Upgraded barracks to level ${newLevel}, new housing capacity: ${newPersonnelCapacity} personnel`,
     barracks: upgradedBarracks,
     cost,
   };

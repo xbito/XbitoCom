@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Globe2, Shield, Users, Microscope, DollarSign, Clock, ChevronRight, FastForward } from 'lucide-react';
+import { Globe2, DollarSign, Clock, ChevronRight } from 'lucide-react';
 import WorldMap from './components/WorldMap';
 import ResourcePanel from './components/ResourcePanel';
 import SidePanel from './components/SidePanel';
@@ -14,14 +14,9 @@ import HangarModal from './components/HangarModal';
 import ConfirmationDialog from './components/ConfirmationDialog';
 import { GameState, Base, Continent, Personnel, ResearchProject, Transaction } from './types';
 import { FACILITY_TYPES, upgradeBarracks } from './data/facilities';
-import { BASE_SALARIES, generatePersonnel } from './data/personnel';
-import { CONTINENTS } from './data/continents';
+import { BASE_SALARIES } from './data/personnel';
 import { MONTHLY_EVENTS, GameEvent, evaluateYearlyPerformance, YearlyReview } from './data/events';
-import { 
-  hasCapacityForNewFacility, 
-  canAssignPersonnelToFacility, 
-  calculateFacilityPersonnelCapacity 
-} from './data/basePersonnel';
+import { hasCapacityForNewFacility, canAssignPersonnelToFacility, calculateFacilityPersonnelCapacity } from './data/basePersonnel';
 
 function App() {
   const [gameState, setGameState] = useState<GameState>({
@@ -116,6 +111,12 @@ function App() {
     }
   }, [gameState.funds, previousFunds]);
 
+  const closeModal = useCallback(() => {
+    setActiveModal(null);
+    setSelectedBase(null);
+    setSelectedContinent(null);
+  }, []);
+
   const addTransaction = useCallback((
     amount: number,
     type: Transaction['type'],
@@ -152,16 +153,28 @@ function App() {
     }));
   }, []);
 
-  const handleCreateBase = useCallback((base: Base) => {
-    const cost = 2000000;
-    setGameState(prev => ({
-      ...prev,
-      funds: prev.funds - cost,
-      bases: [...prev.bases, base],
-    }));
-    addTransaction(cost, 'expense', `New base construction: ${base.name}`, 'facilities');
-    handleCloseBaseModal();
-  }, [addTransaction]);
+  const handleCreateBase = (base: Base) => {
+    setGameState(prev => {
+      // Calculate initial power values from starting facilities
+      const powerPlant = base.facilities.find(f => f.type === 'powerPlant');
+      const barracks = base.facilities.find(f => f.type === 'barracks');
+
+      // Set initial power generation and usage
+      base.power = Math.abs(powerPlant?.powerUsage ?? 0);
+      base.powerUsage = barracks?.powerUsage ?? 0;
+
+      // Set initial housing capacity from barracks
+      base.personnelCapacity = barracks?.personnelCapacity ?? 15;
+
+      // Add the base to the game state
+      return {
+        ...prev,
+        bases: [...prev.bases, base],
+        funds: prev.funds - 2000000 // Deduct base construction cost
+      };
+    });
+    closeModal();
+  };
 
   const handleBaseClick = useCallback((base: Base) => {
     setSelectedBase(base);
@@ -255,31 +268,12 @@ function App() {
 
       // Check if the base has enough available personnel capacity for a new facility
       if (!hasCapacityForNewFacility(base)) {
-        // Display an error or notification that personnel capacity is insufficient
-        alert('Insufficient personnel capacity. Build or upgrade barracks first.');
+        alert('Insufficient housing capacity in barracks. Build or upgrade barracks first.');
         return prev;
       }
 
       const facilityTypeData = FACILITY_TYPES[facilityType];
       const cost = facilityTypeData.baseCost;
-
-      // Create facility based on type
-      const createNewFacility = async () => {
-        if (facilityType === 'hangar') {
-          // Use dynamic import instead of require
-          const { createFacility } = await import('./data/facilities');
-          return createFacility(facilityType, 1);
-        }
-        
-        return {
-          id: crypto.randomUUID(),
-          type: facilityType as any,
-          level: 1,
-          personnel: [],
-          powerUsage: facilityTypeData.basePowerUsage,
-          maintenance: facilityTypeData.baseMaintenance,
-        };
-      };
 
       // Create the facility
       let newFacility;
@@ -295,8 +289,6 @@ function App() {
           maintenance: hangarType.baseMaintenance,
           vehicles: [],
           vehicleCapacity: hangarType.vehicleCapacity,
-          maintenanceBays: hangarType.maintenanceBays,
-          repairSpeed: hangarType.repairSpeed,
           maintenanceQueue: [],
           upgradeLevel: {
             equipmentQuality: 1,
@@ -378,11 +370,11 @@ function App() {
       const newAvailablePersonnel = prev.availablePersonnel.filter(p => p.id !== personnelId);
       
       // Update personnel with assignment info
-      const assignedPersonnel = {
+      const assignedPersonnel: Personnel = {
         ...personnel,
         baseId,
         assignedFacilityId: facilityId,
-        status: 'working'
+        status: 'working' as const // Explicitly type the status
       };
 
       const newBases = prev.bases.map(base => {
@@ -644,7 +636,6 @@ function App() {
           onAddFacility={handleAddFacility}
           onOpenHangar={handleOpenHangar}
           existingBase={selectedBase}
-          availablePersonnel={gameState.availablePersonnel.length}
           availableFunds={gameState.funds}
           selectedContinent={selectedContinent}
         />

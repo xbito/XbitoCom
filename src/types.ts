@@ -11,11 +11,11 @@ export interface Base {
   power: number;
   powerUsage: number;
   continent: Continent;
-  maxSize: number;
+  maxSize: number; // Maximum land usage in facility spaces
   vehicles: Vehicle[];
   radarRange: number;
   radarEffectiveness: number;
-  personnelCapacity?: number; // Maximum personnel capacity for this base
+  personnelCapacity?: number; // Total barracks capacity for housing personnel
 }
 
 export interface Personnel {
@@ -120,15 +120,15 @@ export interface FacilityType {
   name: string;
   description: string;
   baseCost: number;
-  basePersonnel: number;
+  basePersonnel: number; // Staff required to operate the facility
   basePowerUsage: number;
   baseMaintenance: number;
   upgradeMultiplier: number;
-  size: number;
+  size: number; // Land usage in facility spaces
+  personnelCapacity?: number; // For barracks: housing capacity
+  personnelCapacityMultiplier?: number;
   vehicleCapacity?: number;
   vehicleCapacityMultiplier?: number;
-  personnelCapacity?: number; // Base capacity for personnel
-  personnelCapacityMultiplier?: number; // Multiplier for personnel capacity per level
 }
 
 export interface UFO {
