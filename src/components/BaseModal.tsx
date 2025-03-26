@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Building2, Zap, Plus, ChevronUp, MapPin, Plane, Users } from 'lucide-react';
+import { X, Building2, Zap, Plus, ChevronUp, MapPin, Plane, Users, DollarSign } from 'lucide-react';
 import type { Base, Facility, Continent } from '../types';
 import { FACILITY_TYPES } from '../data/facilities';
 import { calculateBasePersonnelCapacity, calculateUsedPersonnelCapacity } from '../data/basePersonnel';
@@ -291,44 +291,78 @@ const BaseModal: React.FC<BaseModalProps> = ({
                     onChange={(e) => setName(e.target.value)}
                     className="w-full bg-slate-700 rounded px-3 py-2 text-white"
                     placeholder="Enter base name"
+                    autoFocus
                   />
                 </div>
 
-                <div>
-                  <label className="block text-sm font-medium mb-1">Personnel Capacity</label>
-                  <div className="flex items-center gap-2">
-                    <div className="bg-slate-700 rounded px-3 py-2 text-white w-full">
-                      <div className="flex justify-between">
-                        <span>{getInitialPersonnelCapacity()} personnel</span>
-                        <span className="text-slate-400 text-xs">
-                          Based on initial facilities & location
-                        </span>
+                <div className="bg-slate-700 p-4 rounded-lg">
+                  <h3 className="font-medium mb-3 flex items-center gap-2">
+                    <Building2 size={16} className="text-blue-400" />
+                    Initial Facilities
+                  </h3>
+                  <div className="space-y-2 mb-4">
+                    <div className="flex justify-between items-center text-sm">
+                      <span>Power Plant (Level 1)</span>
+                      <span className="text-yellow-400">Power: +50</span>
+                    </div>
+                    <div className="flex justify-between items-center text-sm">
+                      <span>Barracks (Level 1)</span>
+                      <span className="text-blue-400">Personnel: 15</span>
+                    </div>
+                  </div>
+                  <div className="text-xs text-slate-400">
+                    Additional facilities can be built after base construction
+                  </div>
+                </div>
+
+                <div className="bg-slate-700 p-4 rounded-lg">
+                  <h3 className="font-medium mb-3 flex items-center gap-2">
+                    <DollarSign size={16} className="text-green-400" />
+                    Construction Details
+                  </h3>
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <div className="text-sm text-slate-400 mb-1">Base Cost</div>
+                      <div className="text-xl font-bold text-green-400">
+                        ${(baseCost ?? 0).toLocaleString()}
+                      </div>
+                      <div className="text-xs text-slate-400 mt-1">
+                        Available: ${(availableFunds ?? 0).toLocaleString()}
+                      </div>
+                    </div>
+                    <div>
+                      <div className="text-sm text-slate-400 mb-1">Initial Personnel Capacity</div>
+                      <div className="text-xl font-bold">{getInitialPersonnelCapacity()}</div>
+                      <div className="text-xs text-slate-400 mt-1">
+                        Available Personnel: {availablePersonnel}
                       </div>
                     </div>
                   </div>
-                  <p className="text-sm text-slate-400 mt-1">
-                    Total available personnel: {availablePersonnel}
-                  </p>
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium mb-1">Cost</label>
-                  <p className="text-xl font-bold text-green-400">
-                    ${(baseCost ?? 0).toLocaleString()}
-                  </p>
-                  <p className="text-sm text-slate-400 mt-1">
-                    Available: ${(availableFunds ?? 0).toLocaleString()}
-                  </p>
                 </div>
 
                 {selectedContinent && (
-                  <div className="bg-slate-700 p-4 rounded">
-                    <h3 className="font-medium mb-2">Location: {selectedContinent.name}</h3>
+                  <div className="bg-slate-700 p-4 rounded-lg">
+                    <h3 className="font-medium mb-3 flex items-center gap-2">
+                      <MapPin size={16} className="text-red-400" />
+                      Regional Advantages: {selectedContinent.name}
+                    </h3>
                     <div className="space-y-2 text-sm">
-                      <p>Base Size Limit: {selectedContinent.maxBaseSize}</p>
-                      <p>Personnel Efficiency: +{((selectedContinent.personnelMultiplier - 1) * 100).toFixed(0)}%</p>
-                      <p>Research Efficiency: +{((selectedContinent.researchMultiplier - 1) * 100).toFixed(0)}%</p>
-                      <p>Defense Strength: +{((selectedContinent.defenseMultiplier - 1) * 100).toFixed(0)}%</p>
+                      <div className="flex justify-between items-center">
+                        <span>Maximum Base Size</span>
+                        <span className="text-blue-400">{selectedContinent.maxBaseSize} facilities</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span>Personnel Efficiency</span>
+                        <span className="text-green-400">+{((selectedContinent.personnelMultiplier - 1) * 100).toFixed(0)}%</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span>Research Efficiency</span>
+                        <span className="text-purple-400">+{((selectedContinent.researchMultiplier - 1) * 100).toFixed(0)}%</span>
+                      </div>
+                      <div className="flex justify-between items-center">
+                        <span>Defense Strength</span>
+                        <span className="text-yellow-400">+{((selectedContinent.defenseMultiplier - 1) * 100).toFixed(0)}%</span>
+                      </div>
                     </div>
                   </div>
                 )}
