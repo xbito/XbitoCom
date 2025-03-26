@@ -81,62 +81,14 @@ export interface Vehicle {
   crew: Personnel[];
   baseId: string;
   stats: VehicleStats;
-  maintenance: number;
-  fuelCost: number;
-  weapons: VehicleWeapon[];
-  components: VehicleComponent[];
-  hardpoints: number; // Number of weapon slots available
-  componentSlots: number; // Number of component slots available
 }
 
-export interface VehicleWeapon {
-  id: string;
-  name: string;
-  type: WeaponType;
-  damage: number;
-  accuracy: number;
+export interface VehicleStats {
+  speed: number;
+  armor: number;
   range: number;
-  ammoCapacity: number;
-  currentAmmo: number;
-  reloadTime: number; // Time in hours to reload
-  cost: number;
-  weight: number;
-  researchRequired?: string[];
-  armorPiercing?: number; // 0-100% effectiveness against armor
-  explosiveRadius?: number; // For explosive weapons
+  capacity: number;
 }
-
-export type WeaponType = 
-  | 'cannon'
-  | 'missile'
-  | 'laser'
-  | 'plasma'
-  | 'bomb'
-  | 'torpedo';
-
-export interface VehicleComponent {
-  id: string;
-  name: string;
-  type: ComponentType;
-  level: number; // 1-5 indicating technology level
-  condition: number; // 0-100%
-  installDate: Date;
-  maintenanceInterval: number; // Hours before maintenance
-  hoursSinceLastMaintenance: number;
-  cost: number;
-  stats: Partial<VehicleStats>; // The stats this component affects
-  researchRequired?: string[];
-}
-
-export type ComponentType =
-  | 'engine'
-  | 'armor'
-  | 'radar'
-  | 'navigation'
-  | 'stealth'
-  | 'shield'
-  | 'medical'
-  | 'cargo';
 
 export type VehicleType =
   | 'interceptor'
@@ -150,14 +102,6 @@ export type VehicleStatus =
   | 'damaged'
   | 'upgrading';
 
-export interface VehicleStats {
-  speed: number;
-  armor: number;
-  firepower: number;
-  range: number;
-  capacity: number;
-}
-
 export interface Facility {
   id: string;
   type: 'research' | 'barracks' | 'hangar' | 'radar' | 'defense' | 'powerPlant';
@@ -167,21 +111,8 @@ export interface Facility {
   maintenance: number;
   vehicles?: Vehicle[];
   vehicleCapacity?: number;  // Maximum number of vehicles the hangar can hold
-  maintenanceBays?: number;  // Number of simultaneous maintenance operations
-  repairSpeed?: number;      // Multiplier for repair speed
   personnelCapacity?: number; // Maximum number of personnel that can be assigned to this facility
   commanderAssigned?: boolean; // Whether a commander is assigned to this barracks
-  maintenanceQueue?: {       // Vehicles in maintenance queue
-    vehicleId: string;
-    startTime: Date;
-    estimatedCompletionTime: Date;
-    repairType: 'routine' | 'damage' | 'overhaul';
-  }[];
-  upgradeLevel?: {           // Upgrade levels for different aspects of the hangar
-    equipmentQuality: number;  // 1-5, affects repair speed and quality
-    baySize: number;           // 1-5, affects capacity for larger vehicles
-    crewTraining: number;      // 1-5, affects maintenance efficiency 
-  };
 }
 
 export interface FacilityType {
