@@ -1,21 +1,21 @@
 import React from 'react';
 import { GameState } from '../types';
-import { Building2, Users, Microscope, DollarSign, HelpCircle } from 'lucide-react';
+import { Users, Microscope, DollarSign, HelpCircle, Radio } from 'lucide-react';
 
 interface SidePanelProps {
   gameState: GameState;
-  onCreateBase: () => void;
   onManagePersonnel: () => void;
   onOpenResearch: () => void;
   onOpenFinancials: () => void;
+  onToggleRadar: () => void;
 }
 
 const SidePanel: React.FC<SidePanelProps> = ({
   gameState,
-  onCreateBase,
   onManagePersonnel,
   onOpenResearch,
   onOpenFinancials,
+  onToggleRadar,
 }) => {
   return (
     <div className="w-80 bg-slate-800 rounded-lg p-4">
@@ -53,6 +53,14 @@ const SidePanel: React.FC<SidePanelProps> = ({
         >
           <DollarSign size={20} />
           Financial Overview
+        </button>
+
+        <button 
+          className="w-full bg-blue-500 hover:bg-blue-600 text-white font-bold py-2 px-4 rounded flex items-center gap-2"
+          onClick={onToggleRadar}
+        >
+          <Radio size={20} />
+          {gameState.showRadarCoverage ? 'Hide Radar Coverage' : 'Show Radar Coverage'}
         </button>
       </div>
       <div className="mt-8">

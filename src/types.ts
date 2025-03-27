@@ -129,6 +129,8 @@ export interface FacilityType {
   personnelCapacityMultiplier?: number;
   vehicleCapacity?: number;
   vehicleCapacityMultiplier?: number;
+  baseRadarRange?: number; // Base radar detection range in km
+  baseEffectiveness?: number; // Base radar effectiveness multiplier
 }
 
 export interface UFO {
@@ -198,6 +200,7 @@ export interface GameState {
     projectedBalance: number;
     transactions: Transaction[];
   };
+  showRadarCoverage: boolean;
 }
 
 export interface Continent {

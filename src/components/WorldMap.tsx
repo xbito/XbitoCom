@@ -6,10 +6,30 @@ interface WorldMapProps {
   bases: Base[];
   onBaseClick: (base: Base) => void;
   onContinentSelect?: (continent: Continent) => void;
+  showRadarCoverage?: boolean;
 }
 
-const WorldMap: React.FC<WorldMapProps> = ({ bases, onBaseClick, onContinentSelect }) => {
+const WorldMap: React.FC<WorldMapProps> = ({ bases, onBaseClick, onContinentSelect, showRadarCoverage = false }) => {
   const [hoveredContinent, setHoveredContinent] = useState<Continent | null>(null);
+
+  // Calculate radar coverage radius based on radar level and effectiveness
+  const getRadarRadius = (base: Base): number => {
+    const radarFacility = base.facilities.find(f => f.type === 'radar');
+    if (!radarFacility) return 0;
+    
+    const baseRange = 50; // Base radius in SVG units
+    const radarBonus = radarFacility.level * 0.2; // 20% per level
+    return baseRange * (1 + radarBonus);
+  };
+
+  // Get radar coverage opacity based on facility level
+  const getRadarOpacity = (base: Base): number => {
+    const radarFacility = base.facilities.find(f => f.type === 'radar');
+    if (!radarFacility) return 0;
+    
+    // Opacity increases with radar level (0.15 to 0.35)
+    return 0.15 + (radarFacility.level * 0.05);
+  };
 
   const handleMapClick = (e: React.MouseEvent<SVGElement>) => {
     if (!onContinentSelect) return;
@@ -136,6 +156,49 @@ const WorldMap: React.FC<WorldMapProps> = ({ bases, onBaseClick, onContinentSele
             onMouseEnter={() => setHoveredContinent(CONTINENTS.oceania)}
             onMouseLeave={() => setHoveredContinent(null)}
           />
+
+          {/* Radar Coverage */}
+          {showRadarCoverage && bases.map((base) => {
+            const position = getBasePosition(base);
+            const radius = getRadarRadius(base);
+            const opacity = getRadarOpacity(base);
+            
+            if (radius === 0) return null;
+
+            return (
+              <g key={`radar-${base.id}`}>
+                {/* Radar gradient */}
+                <defs>
+                  <radialGradient id={`radar-gradient-${base.id}`}>
+                    <stop offset="0%" stopColor="#3b82f6" stopOpacity={opacity} />
+                    <stop offset="70%" stopColor="#3b82f6" stopOpacity={opacity * 0.7} />
+                    <stop offset="100%" stopColor="#3b82f6" stopOpacity={0} />
+                  </radialGradient>
+                </defs>
+                
+                {/* Radar coverage area */}
+                <circle
+                  cx={position.x}
+                  cy={position.y}
+                  r={radius}
+                  fill={`url(#radar-gradient-${base.id})`}
+                  className="pointer-events-none"
+                />
+                
+                {/* Radar range indicator (border) */}
+                <circle
+                  cx={position.x}
+                  cy={position.y}
+                  r={radius}
+                  fill="none"
+                  stroke="#3b82f6"
+                  strokeWidth="1"
+                  strokeDasharray="4 4"
+                  className="pointer-events-none"
+                />
+              </g>
+            );
+          })}
 
           {/* Bases */}
           {bases.map((base) => {

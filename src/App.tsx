@@ -52,7 +52,8 @@ function App() {
           category: 'funding'
         }
       ]
-    }
+    },
+    showRadarCoverage: false
   });
 
   type ModalType = 'intro' | 'base' | 'personnel' | 'research' | 'financial' | 'event' | 'yearlyReview' | 'hangar' | null;
@@ -215,6 +216,13 @@ function App() {
       } else {
         // Regular facility upgrade logic
         const newLevel = facility.level + 1;
+        
+        // Check max level for radar facilities
+        if (facility.type === 'radar' && newLevel > 5) {
+          alert('Radar facility cannot be upgraded beyond level 5');
+          return prev;
+        }
+
         const powerMultiplier = Math.pow(1.2, newLevel - 1);
         
         updatedFacility = {
@@ -238,10 +246,20 @@ function App() {
           return updatedFacility;
         });
 
-        return {
+        const updatedBase = {
           ...b,
           facilities: newFacilities,
         };
+
+        // Update radar properties if upgrading a radar facility
+        if (facility.type === 'radar') {
+          const radarBonus = updatedFacility.level * 0.2; // 20% per level
+          const radarType = FACILITY_TYPES.radar;
+          updatedBase.radarRange = (radarType.baseRadarRange ?? 1000) * (1 + radarBonus);
+          updatedBase.radarEffectiveness = (radarType.baseEffectiveness ?? 1.0) * (1 + radarBonus);
+        }
+
+        return updatedBase;
       });
 
       addTransaction(
@@ -296,6 +314,17 @@ function App() {
             crewTraining: 1
           }
         };
+      } else if (facilityType === 'radar') {
+        // For radar, initialize with radar-specific properties
+        const radarType = FACILITY_TYPES.radar;
+        newFacility = {
+          id: crypto.randomUUID(),
+          type: 'radar' as const,
+          level: 1,
+          personnel: [],
+          powerUsage: radarType.basePowerUsage,
+          maintenance: radarType.baseMaintenance,
+        };
       } else {
         // Regular facility
         newFacility = {
@@ -311,10 +340,20 @@ function App() {
       const newBases = prev.bases.map(b => {
         if (b.id !== baseId) return b;
 
-        return {
+        // Update base with new facility
+        const updatedBase = {
           ...b,
           facilities: [...b.facilities, newFacility],
         };
+
+        // Update radar properties if adding a radar facility
+        if (facilityType === 'radar') {
+          const radarType = FACILITY_TYPES.radar;
+          updatedBase.radarRange = radarType.baseRadarRange ?? 1000;
+          updatedBase.radarEffectiveness = radarType.baseEffectiveness ?? 1.0;
+        }
+
+        return updatedBase;
       });
 
       addTransaction(
@@ -551,6 +590,13 @@ function App() {
     setActiveModal('hangar');
   }, []);
 
+  const handleToggleRadar = useCallback(() => {
+    setGameState(prev => ({
+      ...prev,
+      showRadarCoverage: !prev.showRadarCoverage
+    }));
+  }, []);
+
   return (
     <div className="min-h-screen bg-slate-900 text-white relative">
       <header className="bg-slate-800 p-4 border-b border-slate-700">
@@ -610,14 +656,15 @@ function App() {
             bases={gameState.bases} 
             onBaseClick={handleBaseClick}
             onContinentSelect={!activeModal ? handleContinentSelect : undefined}
+            showRadarCoverage={gameState.showRadarCoverage}
           />
         </div>
         <SidePanel 
           gameState={gameState}
-          onCreateBase={() => setActiveModal('base')}
           onManagePersonnel={() => setActiveModal('personnel')}
           onOpenResearch={() => setActiveModal('research')}
           onOpenFinancials={() => setActiveModal('financial')}
+          onToggleRadar={handleToggleRadar}
         />
       </main>
 
