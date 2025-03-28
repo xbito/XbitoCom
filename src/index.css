@@ -1,3 +1,27 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer utilities {
+  .animate-scan {
+    animation: scan 3s linear infinite;
+  }
+  
+  @keyframes scan {
+    from {
+      transform: translateY(-100%);
+    }
+    to {
+      transform: translateY(100%);
+    }
+  }
+}
+
+/* Continent hover effects */
+.continent-path {
+  transition: all 0.3s ease;
+}
+
+.continent-path:hover {
+  filter: url(#glow) brightness(1.5);
+}

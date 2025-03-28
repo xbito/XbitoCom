@@ -33,11 +33,11 @@ const ResourcePanel: React.FC<ResourcePanelProps> = ({ gameState }) => {
   const totalPersonnel = calculateTotalPersonnel();
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-slate-800 border-t border-slate-700">
+    <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-slate-900 to-slate-800 border-t border-slate-700 shadow-lg">
       <div className="container mx-auto p-4">
         <div className="grid grid-cols-4 gap-4">
           <ResourceCard
-            icon={<Building2 className="text-blue-400" />}
+            icon={<Building2 className="text-teal-400" />}
             title="Bases"
             value={gameState && gameState.bases ? gameState.bases.length : 0}
             description="Active installations"
@@ -75,12 +75,12 @@ interface ResourceCardProps {
 
 const ResourceCard: React.FC<ResourceCardProps> = ({ icon, title, value, description }) => {
   return (
-    <div className="bg-slate-700 rounded-lg p-4">
+    <div className="bg-gradient-to-br from-slate-800 to-slate-900 rounded-lg p-4 shadow-md hover:shadow-lg">
       <div className="flex items-center gap-3">
         {icon}
         <div>
-          <h3 className="text-lg font-semibold">{title}</h3>
-          <p className="text-2xl font-bold">{value}</p>
+          <h3 className="text-lg font-semibold text-teal-300 font-mono">{title}</h3>
+          <p className="text-2xl font-bold text-teal-400 font-mono">{value}</p>
           <p className="text-sm text-slate-400">{description}</p>
         </div>
       </div>
