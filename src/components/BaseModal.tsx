@@ -40,20 +40,21 @@ const BaseModal: React.FC<BaseModalProps> = ({
   // If this is being used as a generic modal with children
   if (children) {
     return (
-      <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-        <div className={`bg-slate-800 rounded-lg p-6 ${
+      <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+        <div className={`bg-gradient-to-b from-slate-900 to-slate-950 rounded-lg p-6 border border-slate-700 shadow-lg ${
           width === 'sm' ? 'w-[400px]' :
           width === 'md' ? 'w-[600px]' :
           width === 'lg' ? 'w-[800px]' :
           width === 'xl' ? 'w-[1000px]' :
+          width === '2xl' ? 'w-[1200px]' :
           'w-[600px]'
         } max-h-[80vh] overflow-y-auto`}>
           {title && (
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-2xl font-bold">{title}</h2>
+            <div className="flex justify-between items-center mb-6 border-b border-slate-700 pb-4">
+              <h2 className="text-2xl font-bold text-green-400">{title}</h2>
               <button
                 onClick={onClose}
-                className="text-slate-400 hover:text-white"
+                className="text-slate-400 hover:text-green-400 transition-colors"
               >
                 <X size={24} />
               </button>
@@ -92,31 +93,39 @@ const BaseModal: React.FC<BaseModalProps> = ({
     
     if (!name || !selectedContinent || !onCreate) return;
     
-    const newBase: Base = {
-      id: existingBase?.id || crypto.randomUUID(),
-      name,
-      x: Math.random() * 100, // Random position within the continent
-      y: Math.random() * 100, // Random position within the continent
-      level: 1,
-      personnel: [], // Personnel will be assigned later by the user from Personnel modal
-      power: 0,
-      powerUsage: 0,
-      continent: selectedContinent,
-      maxSize: selectedContinent.maxBaseSize,
-      facilities: [
-        createFacility('powerPlant'),
-        createFacility('barracks')
-      ],
-      vehicles: [],
-      radarRange: 0, // No radar range since there's no radar
-      radarEffectiveness: 0, // No radar effectiveness since there's no radar
-      personnelCapacity: getInitialPersonnelCapacity(),
-    };
+    try {
+      const newBase: Base = {
+        id: existingBase?.id || crypto.randomUUID(),
+        name,
+        x: Math.random() * 100, // Random position within the continent
+        y: Math.random() * 100, // Random position within the continent
+        level: 1,
+        personnel: [], // Personnel will be assigned later by the user from Personnel modal
+        power: 0,
+        powerUsage: 0,
+        continent: selectedContinent,
+        maxSize: selectedContinent.maxBaseSize,
+        facilities: [
+          createFacility('powerPlant'),
+          createFacility('barracks')
+        ],
+        vehicles: [],
+        radarRange: 0, // No radar range since there's no radar
+        radarEffectiveness: 0, // No radar effectiveness since there's no radar
+        personnelCapacity: getInitialPersonnelCapacity(),
+      };
 
-    onCreate(newBase);
+      onCreate(newBase);
+    } catch (error) {
+      console.error('Failed to create base:', error);
+      alert('An error occurred while creating the base');
+    }
   };
 
   const calculateUpgradeCost = (facility: Facility) => {
+    if (!facility || !facility.type) {
+      throw new Error('Invalid facility provided');
+    }
     const facilityType = FACILITY_TYPES[facility.type];
     return Math.floor(facilityType.baseCost * Math.pow(facilityType.upgradeMultiplier, facility.level));
   };
@@ -126,43 +135,57 @@ const BaseModal: React.FC<BaseModalProps> = ({
   const getAvailableFacilities = () => {
     if (!existingBase) return [];
     
-    const existingTypes = new Set(existingBase.facilities.map(f => f.type));
-    const currentSize = existingBase.facilities.reduce((acc, f) => acc + FACILITY_TYPES[f.type].size, 0);
-    
-    return Object.values(FACILITY_TYPES).filter(f => 
-      !existingTypes.has(f.type as Facility['type']) && 
-      currentSize + f.size <= existingBase.maxSize
-    );
+    try {
+      const existingTypes = new Set(existingBase.facilities.map(f => f.type));
+      const currentSize = existingBase.facilities.reduce((acc, f) => acc + FACILITY_TYPES[f.type].size, 0);
+      
+      return Object.values(FACILITY_TYPES).filter(f => 
+        !existingTypes.has(f.type as Facility['type']) && 
+        currentSize + f.size <= existingBase.maxSize
+      );
+    } catch (error) {
+      console.error('Error getting available facilities:', error);
+      return [];
+    }
   };
 
   const handleAddNewFacility = (facilityType: string) => {
     if (!existingBase || !onAddFacility) return;
-    onAddFacility(existingBase.id, facilityType);
-    setShowFacilitySelect(false);
     
-    // Create the new facility
-    const newFacility = createFacility(facilityType);
-    const updatedFacilities = [...facilities, newFacility];
-    setFacilities(updatedFacilities);
+    try {
+      onAddFacility(existingBase.id, facilityType);
+      setShowFacilitySelect(false);
+      
+      // Create the new facility
+      const newFacility = createFacility(facilityType);
+      const updatedFacilities = [...facilities, newFacility];
+      setFacilities(updatedFacilities);
 
-    // Update the base's state to reflect new facility immediately
-    const updatedBase: Base = {
-      ...existingBase,
-      facilities: updatedFacilities,
-      // Recalculate personnel capacity if it's a barracks
-      personnelCapacity: newFacility.type === 'barracks' 
-        ? calculateBasePersonnelCapacity({ ...existingBase, facilities: updatedFacilities })
-        : existingBase.personnelCapacity
-    };
+      // Update the base's state to reflect new facility immediately
+      const updatedBase: Base = {
+        ...existingBase,
+        facilities: updatedFacilities,
+        // Recalculate personnel capacity if it's a barracks
+        personnelCapacity: newFacility.type === 'barracks' 
+          ? calculateBasePersonnelCapacity({ ...existingBase, facilities: updatedFacilities })
+          : existingBase.personnelCapacity
+      };
 
-    // Update other base properties based on the new facility
-    if (newFacility.powerUsage) {
-      updatedBase.power = calculatePowerStatus(updatedBase).generation;
-      updatedBase.powerUsage = calculatePowerStatus(updatedBase).usage;
+      // Update other base properties based on the new facility
+      if (newFacility.powerUsage) {
+        updatedBase.power = calculatePowerStatus(updatedBase).generation;
+        updatedBase.powerUsage = calculatePowerStatus(updatedBase).usage;
+      }
+    } catch (error) {
+      console.error('Failed to add facility:', error);
+      alert('An error occurred while adding the facility');
     }
   };
 
   const calculatePowerStatus = (base: Base) => {
+    if (!base || !base.facilities) {
+      throw new Error('Invalid base provided');
+    }
     const totalGeneration = base.facilities
       .filter(f => f.powerUsage < 0)
       .reduce((acc, f) => acc + Math.abs(f.powerUsage), 0);
@@ -179,23 +202,26 @@ const BaseModal: React.FC<BaseModalProps> = ({
   };
 
   const calculateBaseSize = (base: Base) => {
+    if (!base || !base.facilities) {
+      throw new Error('Invalid base provided');
+    }
     return base.facilities.reduce((acc, f) => acc + FACILITY_TYPES[f.type].size, 0);
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-slate-800 rounded-lg p-6 w-[600px] max-h-[80vh] overflow-y-auto relative">
+    <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+      <div className="bg-gradient-to-b from-slate-900 to-slate-950 rounded-lg p-6 w-[600px] max-h-[80vh] overflow-y-auto relative border border-slate-700 shadow-lg">
         <button
           onClick={onClose}
-          className="absolute top-4 right-4 text-slate-400 hover:text-white"
+          className="absolute top-4 right-4 text-slate-400 hover:text-green-400 transition-colors"
         >
           <X size={24} />
         </button>
 
-        <div className="flex items-center gap-3 mb-6">
-          <HardHat className="text-blue-400" size={24} />
+        <div className="flex items-center gap-3 mb-6 border-b border-slate-800 pb-4">
+          <HardHat className="text-green-400" size={24} />
           <div>
-            <h2 className="text-2xl font-bold">
+            <h2 className="text-2xl font-bold text-white">
               {existingBase ? `${existingBase.name} - Level ${existingBase.level}` : 'Create New Base'}
             </h2>
             {existingBase && (
@@ -209,7 +235,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
 
         {existingBase && (
           <>
-            <div className="mb-6 bg-slate-700 p-4 rounded-lg">
+            <div className="mb-6 bg-gradient-to-r from-slate-800 to-slate-900 p-4 rounded-lg border border-slate-700">
               <div className="flex items-center gap-2 mb-2">
                 <Zap className="text-yellow-400" size={20} />
                 <h3 className="font-semibold">Power Status</h3>
@@ -238,12 +264,12 @@ const BaseModal: React.FC<BaseModalProps> = ({
               })()}
             </div>
 
-            <div className="mb-4 bg-slate-700 p-4 rounded-lg">
+            <div className="mb-4 bg-gradient-to-r from-slate-800 to-slate-900 p-4 rounded-lg border border-slate-700">
               <h3 className="font-semibold mb-2">Base Land Usage</h3>
               <div className="flex items-center gap-2">
-                <div className="flex-1 h-2 bg-slate-600 rounded-full overflow-hidden">
+                <div className="flex-1 h-2 bg-slate-900 rounded-full overflow-hidden">
                   <div 
-                    className="h-full bg-blue-500"
+                    className="h-full bg-green-500"
                     style={{ 
                       width: `${(calculateBaseSize(existingBase) / existingBase.maxSize) * 100}%`
                     }}
@@ -258,9 +284,9 @@ const BaseModal: React.FC<BaseModalProps> = ({
               </p>
             </div>
 
-            <div className="mb-4 bg-slate-700 p-4 rounded-lg">
+            <div className="mb-4 bg-gradient-to-r from-slate-800 to-slate-900 p-4 rounded-lg border border-slate-700">
               <div className="flex items-center gap-2 mb-2">
-                <Users className="text-blue-400" size={20} />
+                <Users className="text-green-400" size={20} />
                 <h3 className="font-semibold">Personnel Housing</h3>
               </div>
               <div className="grid grid-cols-3 gap-4 text-center">
@@ -269,13 +295,13 @@ const BaseModal: React.FC<BaseModalProps> = ({
                   {(() => {
                     const totalBarracksCapacity = calculateBasePersonnelCapacity(existingBase);
                     return (
-                      <p className="text-lg font-bold">{totalBarracksCapacity}</p>
+                      <p className="text-lg font-bold text-white">{totalBarracksCapacity}</p>
                     );
                   })()}
                 </div>
                 <div>
                   <p className="text-sm text-slate-400">Personnel Housed</p>
-                  <p className="text-lg font-bold">
+                  <p className="text-lg font-bold text-white">
                     {(() => {
                       return calculateUsedPersonnelCapacity(existingBase);
                     })()}
@@ -283,7 +309,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
                 </div>
                 <div>
                   <p className="text-sm text-slate-400">Available Bunks</p>
-                  <p className="text-lg font-bold">
+                  <p className="text-lg font-bold text-white">
                     {(() => {
                       const totalCapacity = calculateBasePersonnelCapacity(existingBase);
                       const totalAssigned = calculateUsedPersonnelCapacity(existingBase);
@@ -301,20 +327,20 @@ const BaseModal: React.FC<BaseModalProps> = ({
             {!existingBase && (
               <>
                 <div>
-                  <label className="block text-sm font-medium mb-1">Base Name</label>
+                  <label className="block text-sm font-medium mb-1 text-slate-300">Base Name</label>
                   <input
                     type="text"
                     value={name}
                     onChange={(e) => setName(e.target.value)}
-                    className="w-full bg-slate-700 rounded px-3 py-2 text-white"
+                    className="w-full bg-slate-800 rounded px-3 py-2 text-white border border-slate-700 focus:border-green-500 focus:outline-none focus:ring-1 focus:ring-green-500"
                     placeholder="Enter base name"
                     autoFocus
                   />
                 </div>
 
-                <div className="bg-slate-700 p-4 rounded-lg">
+                <div className="bg-gradient-to-r from-slate-800 to-slate-900 p-4 rounded-lg border border-slate-700">
                   <h3 className="font-medium mb-3 flex items-center gap-2">
-                    <BrickWall size={16} className="text-blue-400" />
+                    <BrickWall size={16} className="text-green-400" />
                     Initial Facilities
                   </h3>
                   <div className="space-y-2 mb-4">
@@ -324,7 +350,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
                     </div>
                     <div className="flex justify-between items-center text-sm">
                       <span>Barracks (Level 1)</span>
-                      <span className="text-blue-400">Personnel: 15</span>
+                      <span className="text-green-400">Personnel: 15</span>
                     </div>
                   </div>
                   <div className="text-xs text-slate-400">
@@ -332,7 +358,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
                   </div>
                 </div>
 
-                <div className="bg-slate-700 p-4 rounded-lg">
+                <div className="bg-gradient-to-r from-slate-800 to-slate-900 p-4 rounded-lg border border-slate-700">
                   <h3 className="font-medium mb-3 flex items-center gap-2">
                     <Construction size={16} className="text-green-400" />
                     Construction Details
@@ -349,7 +375,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
                     </div>
                     <div>
                       <div className="text-sm text-slate-400 mb-1">Initial Land Usage</div>
-                      <div className="text-xl font-bold">
+                      <div className="text-xl font-bold text-white">
                         2 / {selectedContinent?.maxBaseSize ?? 0} spaces
                       </div>
                       <div className="text-xs text-slate-400 mt-1">
@@ -358,7 +384,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
                     </div>
                     <div>
                       <div className="text-sm text-slate-400 mb-1">Initial Housing Capacity</div>
-                      <div className="text-xl font-bold">{getInitialPersonnelCapacity()}</div>
+                      <div className="text-xl font-bold text-white">{getInitialPersonnelCapacity()}</div>
                       <div className="text-xs text-slate-400 mt-1">
                         From Level 1 Barracks
                       </div>
@@ -367,15 +393,15 @@ const BaseModal: React.FC<BaseModalProps> = ({
                 </div>
 
                 {selectedContinent && (
-                  <div className="bg-slate-700 p-4 rounded-lg">
+                  <div className="bg-gradient-to-r from-slate-800 to-slate-900 p-4 rounded-lg border border-slate-700">
                     <h3 className="font-medium mb-3 flex items-center gap-2">
-                      <LandPlot size={16} className="text-red-400" />
+                      <LandPlot size={16} className="text-green-400" />
                       Regional Advantages: {selectedContinent.name}
                     </h3>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between items-center">
                         <span>Maximum Land Usage</span>
-                        <span className="text-blue-400">{selectedContinent.maxBaseSize} facility spaces</span>
+                        <span className="text-green-400">{selectedContinent.maxBaseSize} facility spaces</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span>Personnel Efficiency</span>
@@ -403,7 +429,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
                     type="button"
                     onClick={() => setShowFacilitySelect(true)}
                     disabled={getAvailableFacilities().length === 0 || (availableFunds ?? 0) < Math.min(...getAvailableFacilities().map(f => f.baseCost))}
-                    className="text-sm bg-blue-500 hover:bg-blue-600 disabled:bg-slate-600 disabled:cursor-not-allowed text-white px-3 py-1 rounded flex items-center gap-1"
+                    className="text-sm bg-green-600 hover:bg-green-700 disabled:bg-slate-800 disabled:text-slate-600 disabled:cursor-not-allowed text-white px-3 py-2 rounded flex items-center gap-1 transition-colors"
                   >
                     <Plus size={16} />
                     Add Facility
@@ -411,7 +437,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
                 </div>
 
                 {showFacilitySelect && (
-                  <div className="mb-4 bg-slate-700 p-4 rounded">
+                  <div className="mb-4 bg-gradient-to-r from-slate-800 to-slate-900 p-4 rounded-lg border border-slate-700">
                     <h4 className="font-medium mb-2">Select Facility to Add</h4>
                     <div className="space-y-2">
                       {getAvailableFacilities().map(facility => (
@@ -420,7 +446,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
                           type="button"
                           onClick={() => handleAddNewFacility(facility.type)}
                           disabled={availableFunds < facility.baseCost}
-                          className="w-full text-left p-2 rounded hover:bg-slate-600 flex justify-between items-center"
+                          className="w-full text-left p-3 rounded hover:bg-slate-800 flex justify-between items-center border border-slate-700 bg-slate-900"
                         >
                           <div>
                             <p className="font-medium">{facility.name}</p>
@@ -443,7 +469,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
                     return (
                       <div
                         key={facility.id}
-                        className="bg-slate-700 p-4 rounded flex justify-between items-center"
+                        className="bg-gradient-to-r from-slate-800 to-slate-900 p-4 rounded-lg flex justify-between items-center border border-slate-700"
                       >
                         <div>
                           <h4 className="font-medium">{facilityType?.name}</h4>
@@ -451,11 +477,11 @@ const BaseModal: React.FC<BaseModalProps> = ({
                           <div className="flex gap-4 mt-1 text-sm">
                             <span className="text-yellow-400">Power: {facility.powerUsage}</span>
                             {facility.type === 'barracks' ? (
-                              <span className="text-blue-400">
+                              <span className="text-green-400">
                                 Commander: {facility.personnel?.some(p => p.role === 'commander') ? '1' : '0'}/1
                               </span>
                             ) : (
-                              <span className="text-blue-400">
+                              <span className="text-green-400">
                                 Personnel: {facility.personnel?.length ?? 0}/{facilityType?.basePersonnel * facility.level}
                               </span>
                             )}
@@ -472,7 +498,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
                             <button
                               type="button"
                               onClick={() => onOpenHangar?.(existingBase)}
-                              className="bg-blue-500 hover:bg-blue-600 text-white px-3 py-2 rounded flex items-center gap-2"
+                              className="bg-green-600 hover:bg-green-700 text-white px-3 py-2 rounded flex items-center gap-2 transition-colors"
                             >
                               <Plane size={16} />
                               <span>Manage</span>
@@ -482,7 +508,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
                             type="button"
                             onClick={() => onUpgrade?.(existingBase?.id ?? '', facility.id)}
                             disabled={(availableFunds ?? 0) < (upgradeCost ?? 0)}
-                            className="bg-green-500 hover:bg-green-600 disabled:bg-slate-600 disabled:cursor-not-allowed text-white px-3 py-2 rounded flex items-center gap-2"
+                            className="bg-green-600 hover:bg-green-700 disabled:bg-slate-800 disabled:text-slate-600 disabled:cursor-not-allowed text-white px-3 py-2 rounded flex items-center gap-2 transition-colors"
                           >
                             <ChevronUp size={16} />
                             <div>
@@ -503,7 +529,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
             <button
               type="submit"
               disabled={!canCreate}
-              className="mt-6 w-full bg-blue-500 hover:bg-blue-600 disabled:bg-slate-600 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded"
+              className="mt-6 w-full bg-green-600 hover:bg-green-700 disabled:bg-slate-800 disabled:text-slate-600 disabled:cursor-not-allowed text-white font-bold py-3 px-4 rounded transition-colors"
             >
               Create Base
             </button>

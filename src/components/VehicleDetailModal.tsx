@@ -57,6 +57,10 @@ const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
     if (!pendingAction) return;
 
     try {
+      if (!pendingAction.personnel || !pendingAction.personnel.id) {
+        throw new Error('Invalid personnel data');
+      }
+      
       if (pendingAction.type === 'assign') {
         const updatedVehicle: Vehicle = {
           ...vehicle,
@@ -76,7 +80,7 @@ const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
       }
     } catch (error) {
       console.error('Failed to update vehicle crew:', error);
-      // You could add a toast notification here if you have one
+      alert('An error occurred while updating vehicle crew');
     }
 
     setShowConfirmation(false);
@@ -97,9 +101,9 @@ const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
             <button
               className={`px-4 py-2 rounded-t-lg ${
                 activeTab === 'info' 
-                  ? 'bg-blue-500 text-white' 
-                  : 'text-slate-400 hover:text-white hover:bg-slate-700'
-              }`}
+                  ? 'bg-green-600 text-white' 
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              } transition-colors`}
               onClick={() => setActiveTab('info')}
             >
               Info
@@ -107,9 +111,9 @@ const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
             <button
               className={`px-4 py-2 rounded-t-lg ${
                 activeTab === 'crew' 
-                  ? 'bg-blue-500 text-white' 
-                  : 'text-slate-400 hover:text-white hover:bg-slate-700'
-              }`}
+                  ? 'bg-green-600 text-white' 
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              } transition-colors`}
               onClick={() => setActiveTab('crew')}
             >
               Crew
@@ -123,9 +127,9 @@ const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
               <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {/* Left column */}
                 <div>
-                  <div className="bg-slate-700 p-4 rounded-lg mb-4">
+                  <div className="bg-gradient-to-r from-slate-800 to-slate-900 p-4 rounded-lg mb-4 border border-slate-700">
                     <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
-                      <Plane className="text-blue-400" size={20} />
+                      <Plane className="text-green-400" size={20} />
                       Vehicle Information
                     </h3>
                     <div className="grid grid-cols-2 gap-2">
@@ -138,7 +142,7 @@ const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
                       <div className="text-slate-400">Condition:</div>
                       <div className="text-slate-200 font-medium">
                         {vehicle.condition}%
-                        <div className="w-full bg-slate-800 rounded-full h-2 mt-1">
+                        <div className="w-full bg-slate-900 rounded-full h-2 mt-1">
                           <div 
                             className={`${
                               vehicle.condition < 30 ? 'bg-red-500' : 
@@ -158,9 +162,9 @@ const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
 
                 {/* Right column */}
                 <div>
-                  <div className="bg-slate-700 p-4 rounded-lg mb-4">
+                  <div className="bg-gradient-to-r from-slate-800 to-slate-900 p-4 rounded-lg mb-4 border border-slate-700">
                     <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
-                      <Shield className="text-blue-400" size={20} />
+                      <Shield className="text-green-400" size={20} />
                       Vehicle Stats
                     </h3>
                     <div className="grid grid-cols-2 gap-2">
@@ -195,22 +199,22 @@ const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
             {activeTab === 'crew' && (
               <div className="space-y-6">
                 {/* Current crew */}
-                <div className="bg-slate-700 p-4 rounded-lg">
+                <div className="bg-gradient-to-r from-slate-800 to-slate-900 p-4 rounded-lg border border-slate-700">
                   <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
-                    <Users className="text-blue-400" size={20} />
+                    <Users className="text-green-400" size={20} />
                     Current Crew
                   </h3>
                   {vehicle.crew.length > 0 ? (
                     <div className="space-y-2">
                       {vehicle.crew.map(personnel => (
-                        <div key={personnel.id} className="bg-slate-800 rounded-lg p-3 flex justify-between items-center">
+                        <div key={personnel.id} className="bg-slate-900 rounded-lg p-3 flex justify-between items-center border border-slate-800">
                           <div>
                             <div className="font-medium text-slate-200">{personnel.name}</div>
                             <div className="text-sm text-slate-400 capitalize">
                               {personnel.role} - Experience: {personnel.experience}
                             </div>
                             {personnel.role === 'pilot' && personnel.vehicleSpecialization && (
-                              <div className="text-xs text-blue-400">
+                              <div className="text-xs text-green-400">
                                 {personnel.vehicleSpecialization.vehicleType === vehicle.type && (
                                   <span>
                                     Specialized in this vehicle ({personnel.vehicleSpecialization.proficiency}% proficiency)
@@ -222,7 +226,7 @@ const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
                           
                           <button
                             onClick={() => handleRemovePersonnel(personnel.id)}
-                            className="px-3 py-1 text-sm bg-red-500 text-white rounded hover:bg-red-600"
+                            className="px-3 py-1 text-sm bg-red-500 hover:bg-red-600 text-white rounded transition-colors"
                           >
                             Remove
                           </button>
@@ -235,7 +239,7 @@ const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
                 </div>
                 
                 {/* Available personnel */}
-                <div className="bg-slate-700 p-4 rounded-lg">
+                <div className="bg-gradient-to-r from-slate-800 to-slate-900 p-4 rounded-lg border border-slate-700">
                   <h3 className="font-bold text-lg mb-3 flex items-center gap-2">
                     <Users className="text-green-400" size={20} />
                     Available Personnel
@@ -243,7 +247,7 @@ const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
                   {availablePersonnel.length > 0 ? (
                     <div className="space-y-2">
                       {availablePersonnel.map(personnel => (
-                        <div key={personnel.id} className="bg-slate-800 rounded-lg p-3 flex justify-between items-center">
+                        <div key={personnel.id} className="bg-slate-900 rounded-lg p-3 flex justify-between items-center border border-slate-800">
                           <div>
                             <div className="font-medium text-slate-200">{personnel.name}</div>
                             <div className="text-sm text-slate-400 capitalize">
@@ -253,7 +257,7 @@ const VehicleDetailModal: React.FC<VehicleDetailModalProps> = ({
                           
                           <button
                             onClick={() => handleAssignPersonnel(personnel)}
-                            className="px-3 py-1 text-sm bg-green-500 text-white rounded hover:bg-green-600"
+                            className="px-3 py-1 text-sm bg-green-600 hover:bg-green-700 text-white rounded transition-colors"
                           >
                             Assign
                           </button>

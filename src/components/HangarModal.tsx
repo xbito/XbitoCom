@@ -52,6 +52,9 @@ const HangarModal: React.FC<HangarModalProps> = ({
   // Update the base after vehicle changes
   const handleUpdateVehicle = (updatedVehicle: Vehicle) => {
     try {
+      if (!updatedVehicle || !updatedVehicle.id) {
+        throw new Error('Invalid vehicle data');
+      }
       const updatedVehicles = base.vehicles.map(v => 
         v.id === updatedVehicle.id ? updatedVehicle : v);
       
@@ -126,6 +129,9 @@ const HangarModal: React.FC<HangarModalProps> = ({
     if (!pendingPurchase || !selectedFacility) return;
 
     try {
+      if (!base || !base.id) {
+        throw new Error('Invalid base data');
+      }
       const newVehicle = generateVehicle(pendingPurchase.variantKey, base.id);
       const updatedVehicles = [...base.vehicles, newVehicle];
       
@@ -163,9 +169,9 @@ const HangarModal: React.FC<HangarModalProps> = ({
             <button
               className={`px-4 py-2 rounded-t-lg ${
                 activeTab === 'vehicles' 
-                  ? 'bg-blue-500 text-white' 
-                  : 'text-slate-400 hover:text-white hover:bg-slate-700'
-              }`}
+                  ? 'bg-green-600 text-white' 
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              } transition-colors`}
               onClick={() => setActiveTab('vehicles')}
             >
               Vehicles
@@ -173,9 +179,9 @@ const HangarModal: React.FC<HangarModalProps> = ({
             <button
               className={`px-4 py-2 rounded-t-lg ${
                 activeTab === 'purchase' 
-                  ? 'bg-blue-500 text-white' 
-                  : 'text-slate-400 hover:text-white hover:bg-slate-700'
-              }`}
+                  ? 'bg-green-600 text-white' 
+                  : 'text-slate-400 hover:text-white hover:bg-slate-800'
+              } transition-colors`}
               onClick={() => setActiveTab('purchase')}
             >
               Purchase
@@ -189,7 +195,7 @@ const HangarModal: React.FC<HangarModalProps> = ({
                 {base.vehicles.map(vehicle => (
                   <div 
                     key={vehicle.id} 
-                    className="bg-slate-700 rounded-lg p-4 cursor-pointer hover:bg-slate-600 transition-colors duration-200"
+                    className="bg-gradient-to-r from-slate-800 to-slate-900 rounded-lg p-4 cursor-pointer hover:bg-slate-800 transition-colors duration-200 border border-slate-700"
                     onClick={() => handleSelectVehicle(vehicle)}
                   >
                     <div className="flex justify-between items-center">
@@ -200,7 +206,7 @@ const HangarModal: React.FC<HangarModalProps> = ({
                           <span className="ml-2 text-red-400 text-sm font-normal">DAMAGED</span>
                         )}
                       </h3>
-                      <span className="capitalize bg-slate-600 px-2 py-1 rounded text-sm">
+                      <span className="capitalize bg-slate-900 px-2 py-1 rounded text-sm border border-slate-700">
                         {vehicle.type}
                       </span>
                     </div>
@@ -208,7 +214,7 @@ const HangarModal: React.FC<HangarModalProps> = ({
                     <div className="grid grid-cols-2 gap-4 mt-3">
                       <div className="space-y-2">
                         <div className="flex items-center text-sm">
-                          <Shield className="w-4 h-4 mr-2 text-blue-400" />
+                          <Shield className="w-4 h-4 mr-2 text-green-400" />
                           <span>Armor: {vehicle.stats.armor}</span>
                         </div>
                         <div className="flex items-center text-sm">
@@ -218,7 +224,7 @@ const HangarModal: React.FC<HangarModalProps> = ({
                       </div>
                       <div className="space-y-2">
                         <div className="flex items-center text-sm">
-                          <Plane className="w-4 h-4 mr-2 text-purple-400" />
+                          <Plane className="w-4 h-4 mr-2 text-green-400" />
                           <span>Range: {vehicle.stats.range}</span>
                         </div>
                         <div className="flex items-center text-sm">
@@ -232,11 +238,11 @@ const HangarModal: React.FC<HangarModalProps> = ({
             )}
 
             {activeTab === 'vehicles' && base.vehicles.length === 0 && (
-              <div className="flex flex-col items-center justify-center h-40 bg-slate-700 rounded-lg p-6">
+              <div className="flex flex-col items-center justify-center h-40 bg-gradient-to-r from-slate-800 to-slate-900 rounded-lg p-6 border border-slate-700">
                 <p className="text-slate-400 mb-4">No vehicles available. Purchase vehicles in the Purchase tab.</p>
                 <button
                   onClick={() => setActiveTab('purchase')}
-                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded flex items-center gap-2"
+                  className="bg-green-600 hover:bg-green-700 text-white px-4 py-2 rounded flex items-center gap-2 transition-colors"
                 >
                   <DollarSign size={16} />
                   Go to Purchase
@@ -246,7 +252,7 @@ const HangarModal: React.FC<HangarModalProps> = ({
 
             {activeTab === 'purchase' && (
               <div>
-                <div className="flex justify-between items-center mb-4 bg-slate-700 p-4 rounded-lg">
+                <div className="flex justify-between items-center mb-4 bg-gradient-to-r from-slate-800 to-slate-900 p-4 rounded-lg border border-slate-700">
                   <h3 className="font-bold flex items-center gap-2">
                     <DollarSign className="text-green-400" size={20} />
                     Purchase New Vehicles
@@ -266,7 +272,7 @@ const HangarModal: React.FC<HangarModalProps> = ({
                     if (variants.length === 0) return null;
 
                     return (
-                      <div key={type} className="bg-slate-700 rounded-lg p-4">
+                      <div key={type} className="bg-gradient-to-r from-slate-800 to-slate-900 rounded-lg p-4 border border-slate-700">
                         <h4 className="font-bold mb-3 capitalize">{type} Aircraft</h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                           {variants.map(([variantKey, variant]) => {
@@ -274,7 +280,7 @@ const HangarModal: React.FC<HangarModalProps> = ({
                             const hasCapacity = getAvailableCapacity() > 0;
 
                             return (
-                              <div key={variantKey} className="bg-slate-800 rounded-lg p-4">
+                              <div key={variantKey} className="bg-slate-900 rounded-lg p-4 border border-slate-800">
                                 <div className="flex justify-between items-center mb-2">
                                   <h5 className="font-bold text-lg">{variant.name}</h5>
                                   <span className="text-green-400">${variant.baseCost.toLocaleString()}</span>
@@ -292,10 +298,10 @@ const HangarModal: React.FC<HangarModalProps> = ({
                                 <button
                                   disabled={!canAfford || !hasCapacity}
                                   onClick={() => handlePurchaseVehicle(variantKey, variant)}
-                                  className={`w-full mt-4 py-2 rounded flex items-center justify-center gap-2 ${
+                                  className={`w-full mt-4 py-2 rounded flex items-center justify-center gap-2 transition-colors ${
                                     canAfford && hasCapacity
-                                      ? 'bg-green-500 hover:bg-green-600 text-white'
-                                      : 'bg-slate-600 cursor-not-allowed'
+                                      ? 'bg-green-600 hover:bg-green-700 text-white'
+                                      : 'bg-slate-800 text-slate-600 cursor-not-allowed'
                                   }`}
                                 >
                                   <DollarSign size={16} />

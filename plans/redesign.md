@@ -29,3 +29,12 @@
 
 ## Financial Overview Modal
 - Make the Financial Overview modal more consistent with the new dashboard and world map styling. Focus specifically on the buttons, fonts, colors, effects and highlights around that part of the UI.
+
+## Next Turn Modals
+- Make the modals that appear when clicking continue in order to end the turn more consistent with the new dashboard and world map styling. Focus specifically on the buttons, fonts, colors, effects and highlights around that part of the UI.
+
+## Base Modals
+- Make the following modals more consistent with the new dashboard and world map styling. Focus specifically on the buttons, fonts, colors, effects and highlights around that part of the UI:
+  - Base Modal (creating and managing bases)
+  - Hangar Modal
+  - Vehicle Detail Modal
