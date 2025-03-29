@@ -20,3 +20,12 @@
 
 ## Introduction Modals
 - Make the introduction modal more consistent with the new dashboard and world map styling. Focus specifically on the buttons, fonts, colors, effects and highlights around that part of the UI.
+
+## Personnel Management Modals
+- Make the Personnel Management modal more consistent with the new dashboard and world map styling. Focus specifically on the buttons, fonts, colors, effects and highlights around that part of the UI.
+
+## Research Laboratory Modal
+- Make the Research Laboratory modal more consistent with the new dashboard and world map styling. Focus specifically on the buttons, fonts, colors, effects and highlights around that part of the UI.
+
+## Financial Overview Modal
+- Make the Financial Overview modal more consistent with the new dashboard and world map styling. Focus specifically on the buttons, fonts, colors, effects and highlights around that part of the UI.

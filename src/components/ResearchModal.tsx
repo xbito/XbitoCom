@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Microscope, X, Lock, CheckCircle, Clock, DollarSign, Users, Building2 } from 'lucide-react';
+import { Microscope, X, Lock, CheckCircle, Clock, DollarSign, Users, Building2, Beaker, Zap } from 'lucide-react';
 import { GameState, ResearchProject, ResearchCategory } from '../types';
 import { RESEARCH_PROJECTS } from '../data/research';
 
@@ -75,14 +75,14 @@ const ResearchModal: React.FC<ResearchModalProps> = ({
     return (
       <div className="space-y-2 text-sm">
         <div className="flex items-center gap-2">
-          <Users size={16} />
+          <Users size={16} className="text-green-400" />
           <span className={availableScientists >= project.requirements.scientists ? 'text-green-400' : 'text-red-400'}>
             {project.requirements.scientists} Scientists Required
           </span>
         </div>
         {project.requirements.facilities.map((facility: { type: string; level: number }, index: number) => (
           <div key={index} className="flex items-center gap-2">
-            <Building2 size={16} />
+            <Building2 size={16} className="text-green-400" />
             <span className={
               gameState.bases.some(base =>
                 base.facilities.some(
@@ -101,7 +101,10 @@ const ResearchModal: React.FC<ResearchModalProps> = ({
           const prereq = RESEARCH_PROJECTS.find(r => r.id === prereqId);
           return (
             <div key={prereqId} className="flex items-center gap-2">
-              {completed ? <CheckCircle size={16} className="text-green-400" /> : <Lock size={16} className="text-red-400" />}
+              {completed ? 
+                <CheckCircle size={16} className="text-green-400" /> : 
+                <Lock size={16} className="text-red-400" />
+              }
               <span className={completed ? 'text-green-400' : 'text-red-400'}>
                 Requires: {prereq?.name}
               </span>
@@ -113,38 +116,43 @@ const ResearchModal: React.FC<ResearchModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-      <div className="bg-slate-800 rounded-lg p-6 w-[1000px] max-h-[80vh] overflow-y-auto">
+    <div className="fixed inset-0 bg-black/80 backdrop-blur-sm flex items-center justify-center z-50">
+      <div className="bg-gradient-to-b from-zinc-900 to-black rounded-lg border border-green-900/30 p-6 w-[1000px] max-h-[80vh] overflow-y-auto shadow-[0_0_15px_rgba(34,197,94,0.2)]">
         <div className="flex justify-between items-center mb-6">
           <div className="flex items-center gap-3">
-            <Microscope className="text-purple-400" size={24} />
-            <h2 className="text-2xl font-bold">Research Laboratory</h2>
+            <div className="p-2 bg-black/50 rounded-full border border-green-800/20 shadow-[0_0_10px_rgba(34,197,94,0.3)]">
+              <Microscope className="text-green-400" size={24} />
+            </div>
+            <h2 className="text-xl font-semibold text-green-50">Research Laboratory</h2>
           </div>
           <button
             onClick={onClose}
-            className="text-slate-400 hover:text-white"
+            className="text-slate-400 hover:text-green-400 transition-colors"
           >
-            <X size={24} />
+            <X size={22} />
           </button>
         </div>
 
         {/* Active Research */}
         {gameState?.activeResearchProject && (
-          <div className="mb-6 bg-slate-700 p-4 rounded-lg">
-            <h3 className="text-lg font-semibold mb-2">Current Research</h3>
+          <div className="mb-6 bg-gradient-to-r from-black to-zinc-900 border border-green-900/20 p-4 rounded-lg">
+            <div className="flex items-center gap-2 mb-3">
+              <Beaker className="text-green-400" size={18} />
+              <h3 className="text-sm font-semibold text-green-100">Current Research</h3>
+            </div>
             <div className="flex justify-between items-center">
               <div>
-                <p className="font-medium">{gameState.activeResearchProject.name}</p>
+                <p className="font-medium text-green-50">{gameState.activeResearchProject.name}</p>
                 <p className="text-sm text-slate-400">{gameState.activeResearchProject.description}</p>
               </div>
               <div className="text-right">
-                <div className="text-sm text-slate-400">Progress</div>
-                <div className="text-xl font-bold">{gameState.activeResearchProject.progress}%</div>
+                <div className="text-xs text-slate-400">Progress</div>
+                <div className="text-xl font-bold text-green-400">{gameState.activeResearchProject.progress}%</div>
               </div>
             </div>
-            <div className="mt-2 h-2 bg-slate-600 rounded-full overflow-hidden">
+            <div className="mt-2 h-2 bg-black/60 rounded-full overflow-hidden">
               <div
-                className="h-full bg-purple-500"
+                className="h-full bg-gradient-to-r from-green-600 to-green-400 shadow-[0_0_8px_rgba(34,197,94,0.5)]"
                 style={{ width: `${gameState.activeResearchProject.progress}%` }}
               />
             </div>
@@ -156,10 +164,10 @@ const ResearchModal: React.FC<ResearchModalProps> = ({
           <div className="flex gap-2 overflow-x-auto pb-2">
             <button
               onClick={() => setSelectedCategory(null)}
-              className={`px-4 py-2 rounded-full whitespace-nowrap ${
+              className={`px-4 py-1.5 rounded text-sm font-medium transition-all duration-200 ${
                 selectedCategory === null
-                  ? 'bg-purple-500 text-white'
-                  : 'bg-slate-700 hover:bg-slate-600'
+                  ? 'bg-green-600 text-white shadow-[0_0_10px_rgba(34,197,94,0.4)]'
+                  : 'bg-black hover:bg-zinc-800 text-gray-300 border border-green-900/20'
               }`}
             >
               All Projects
@@ -168,10 +176,10 @@ const ResearchModal: React.FC<ResearchModalProps> = ({
               <button
                 key={category}
                 onClick={() => setSelectedCategory(category)}
-                className={`px-4 py-2 rounded-full capitalize whitespace-nowrap ${
+                className={`px-4 py-1.5 rounded text-sm font-medium capitalize transition-all duration-200 ${
                   selectedCategory === category
-                    ? 'bg-purple-500 text-white'
-                    : 'bg-slate-700 hover:bg-slate-600'
+                    ? 'bg-green-600 text-white shadow-[0_0_10px_rgba(34,197,94,0.4)]'
+                    : 'bg-black hover:bg-zinc-800 text-gray-300 border border-green-900/20'
                 }`}
               >
                 {category}
@@ -183,38 +191,47 @@ const ResearchModal: React.FC<ResearchModalProps> = ({
         {/* Available Projects */}
         <div className="grid grid-cols-2 gap-4">
           {getAvailableProjects().map(project => (
-            <div key={project.id} className="bg-slate-700 p-4 rounded-lg">
-              <div className="flex justify-between items-start mb-2">
+            <div key={project.id} className="bg-gradient-to-br from-zinc-900 to-black border border-green-900/30 p-4 rounded-lg relative overflow-hidden group hover:shadow-[0_0_10px_rgba(34,197,94,0.2)] transition-all duration-300">
+              {/* Subtle glowing corner effect */}
+              <div className="absolute -top-10 -right-10 w-20 h-20 bg-green-500/10 rounded-full blur-xl opacity-0 group-hover:opacity-50 transition-opacity"></div>
+              
+              <div className="flex justify-between items-start mb-2 relative">
                 <div>
-                  <h4 className="font-semibold">{project.name}</h4>
+                  <h4 className="font-semibold text-green-50">{project.name}</h4>
                   <p className="text-sm text-slate-400">{project.description}</p>
                 </div>
-                <span className="text-xs bg-slate-600 px-2 py-1 rounded-full capitalize">
+                <span className="text-xs bg-black/50 border border-green-800/20 px-2 py-0.5 rounded capitalize text-green-400">
                   {project.category}
                 </span>
               </div>
 
-              <div className="mt-4 space-y-4">
+              <div className="mt-4 space-y-4 relative">
                 <div className="grid grid-cols-2 gap-4 text-sm">
                   <div className="flex items-center gap-2">
-                    <Clock size={16} className="text-blue-400" />
-                    <span>{project.duration} days</span>
+                    <Clock size={16} className="text-green-400" />
+                    <span className="text-gray-300">{project.duration} days</span>
                   </div>
                   <div className="flex items-center gap-2">
                     <DollarSign size={16} className="text-green-400" />
-                    <span>${project.cost.toLocaleString()}</span>
+                    <span className="text-gray-300">${project.cost.toLocaleString()}</span>
                   </div>
                 </div>
 
-                <div className="border-t border-slate-600 pt-4">
-                  <h5 className="font-medium mb-2">Requirements</h5>
+                <div className="border-t border-green-900/20 pt-4">
+                  <h5 className="font-medium mb-2 text-xs text-green-400 uppercase tracking-wider flex items-center gap-1">
+                    <Zap size={12} />
+                    Requirements
+                  </h5>
                   {renderRequirements(project)}
                 </div>
 
                 <button
                   onClick={() => onStartResearch(project)}
                   disabled={!canStartResearch(project)}
-                  className="w-full bg-purple-500 hover:bg-purple-600 disabled:bg-slate-600 disabled:cursor-not-allowed text-white font-bold py-2 px-4 rounded"
+                  className={`w-full py-2 px-4 rounded text-sm font-medium transition-all duration-200
+                    ${canStartResearch(project) 
+                      ? 'bg-gradient-to-r from-green-600 to-green-500 text-white hover:shadow-[0_0_10px_rgba(34,197,94,0.4)]' 
+                      : 'bg-zinc-900 text-zinc-600 cursor-not-allowed border border-zinc-800'}`}
                 >
                   Start Research
                 </button>
