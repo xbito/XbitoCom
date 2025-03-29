@@ -32,47 +32,56 @@ const ResourcePanel: React.FC<ResourcePanelProps> = ({ gameState }) => {
   const availablePersonnel = gameState?.availablePersonnel?.length || 0;
   const totalPersonnel = calculateTotalPersonnel();
 
+  // Runtime validation
+  if (typeof availablePersonnel !== 'number') {
+    throw new Error('Available personnel must be a number');
+  }
+  if (typeof totalPersonnel !== 'number') {
+    throw new Error('Total personnel must be a number');
+  }
+
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-slate-900 via-slate-900 to-transparent">
-      <div className="container mx-auto px-4 py-3">
+    <div className="fixed bottom-0 left-0 right-0 bg-gradient-to-t from-gray-950 via-gray-950 to-transparent z-10">
+      <div className="container mx-auto px-4 py-4">
         <div className="grid grid-cols-4 gap-4">
           <ResourceCard
-            icon={<Building2 className="text-teal-400" size={20} />}
+            icon={<Building2 className="text-green-400" size={20} />}
             title="Global Network"
             value={gameState && gameState.bases ? gameState.bases.length : 0}
             description="Active Installations"
-            bgColor="from-teal-500/5 to-transparent"
-            iconBg="bg-teal-500/10"
+            bgColor="from-green-900/20 to-gray-950"
+            iconBg="bg-green-900/30"
+            textColor="text-green-300"
           />
           <ResourceCard
-            icon={<Users className="text-yellow-400" size={20} />}
+            icon={<Users className="text-green-400" size={20} />}
             title="Personnel Status"
             value={`${availablePersonnel} / ${totalPersonnel}`}
             description="Available / Total Agents"
-            bgColor="from-yellow-500/5 to-transparent"
-            iconBg="bg-yellow-500/10"
+            bgColor="from-green-900/20 to-gray-950"
+            iconBg="bg-green-900/30"
+            textColor="text-green-300"
           />
           <ResourceCard
-            icon={<Microscope className="text-purple-400" size={20} />}
+            icon={<Microscope className="text-green-400" size={20} />}
             title="Research Progress"
             value={gameState && gameState.research !== undefined ? `${gameState.research}%` : '0%'}
             description="Current Project Status"
-            bgColor="from-purple-500/5 to-transparent"
-            iconBg="bg-purple-500/10"
+            bgColor="from-green-900/20 to-gray-950"
+            iconBg="bg-green-900/30"
+            textColor="text-green-300"
           />
           <ResourceCard
             icon={<Shield className="text-red-400" size={20} />}
             title="Threat Analysis"
             value={gameState && gameState.threatLevel !== undefined ? gameState.threatLevel : 0}
             description="Global Alert Status"
-            bgColor="from-red-500/5 to-transparent"
-            iconBg="bg-red-500/10"
+            bgColor="from-red-900/20 to-gray-950"
+            iconBg="bg-red-900/30"
+            textColor="text-red-300"
           />
         </div>
       </div>
-      
-      {/* Overlay gradient for better blending */}
-      <div className="absolute inset-0 bg-gradient-to-b from-transparent via-slate-900/50 to-slate-900 pointer-events-none" />
     </div>
   );
 };
@@ -84,6 +93,7 @@ interface ResourceCardProps {
   description: string;
   bgColor: string;
   iconBg: string;
+  textColor: string;
 }
 
 const ResourceCard: React.FC<ResourceCardProps> = ({ 
@@ -92,20 +102,21 @@ const ResourceCard: React.FC<ResourceCardProps> = ({
   value, 
   description,
   bgColor,
-  iconBg
+  iconBg,
+  textColor
 }) => {
   return (
-    <div className={`bg-gradient-to-r ${bgColor} backdrop-blur-sm rounded-lg p-4 border border-slate-700/50`}>
+    <div className={`bg-gradient-to-r ${bgColor} backdrop-blur-sm rounded-lg p-4 border border-gray-800 shadow-lg shadow-black/50`}>
       <div className="flex items-center gap-3">
-        <div className={`w-10 h-10 ${iconBg} rounded-lg flex items-center justify-center`}>
+        <div className={`w-10 h-10 ${iconBg} rounded-lg flex items-center justify-center glow-sm`}>
           {icon}
         </div>
         <div>
-          <h3 className="text-sm font-medium text-slate-300 font-mono uppercase tracking-wide">{title}</h3>
-          <p className="text-2xl font-bold font-mono tracking-wider bg-gradient-to-r from-white to-slate-300 text-transparent bg-clip-text">
+          <h3 className={`text-sm font-medium ${textColor} font-mono uppercase tracking-wide`}>{title}</h3>
+          <p className="text-2xl font-bold font-mono tracking-wider text-white glow-text">
             {value}
           </p>
-          <p className="text-xs text-slate-400 font-mono">{description}</p>
+          <p className="text-xs text-gray-400 font-mono">{description}</p>
         </div>
       </div>
     </div>

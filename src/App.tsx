@@ -601,27 +601,27 @@ function App() {
     <div className="min-h-screen bg-slate-900 text-white relative">
       <header className="bg-gradient-to-b from-slate-800 to-slate-900 p-4 border-b border-slate-700/50 shadow-lg">
         <div className="container mx-auto flex justify-between items-center">
-          <h1 className="text-2xl font-bold flex items-center gap-3">
-            <div className="w-10 h-10 bg-blue-500/10 rounded-lg flex items-center justify-center">
-              <Globe2 className="text-blue-400" />
+          <h1 className="text-xl font-medium flex items-center gap-3">
+            <div className="w-9 h-9 bg-blue-500/10 rounded-lg flex items-center justify-center">
+              <Globe2 className="text-blue-400/80" />
             </div>
             <div>
-              <div className="font-mono tracking-tight">GLOBAL DEFENSE AGENCY</div>
-              <div className="text-xs text-slate-400 font-normal">Command Interface v1.0</div>
+              <div className="font-mono tracking-tight text-slate-300">GLOBAL DEFENSE AGENCY</div>
+              <div className="text-xs text-slate-500 font-normal">Command Interface v1.0</div>
             </div>
           </h1>
           
-          <div className="flex gap-8 items-center">
-            {/* Financial information with enhanced styling */}
+          <div className="flex gap-6 items-center">
+            {/* Financial information with more subdued styling */}
             <div className="flex items-center gap-3 bg-slate-800/50 px-4 py-2 rounded-lg border border-slate-700/50">
-              <div className="w-8 h-8 bg-green-500/10 rounded-lg flex items-center justify-center">
-                <DollarSign className="text-green-400" size={20} />
+              <div className="w-7 h-7 bg-green-500/10 rounded-lg flex items-center justify-center">
+                <DollarSign className="text-green-500/70" size={18} />
               </div>
               <div>
-                <div className="font-mono text-green-400 text-lg tracking-wider">
+                <div className="font-mono text-green-500/80 text-base tracking-wider">
                   ${gameState.funds.toLocaleString()}
                 </div>
-                <div className="text-xs text-green-400/70 flex items-center gap-1">
+                <div className="text-xs text-green-500/60 flex items-center gap-1">
                   {gameState.financials.monthlyIncome > 
                    (gameState.financials.monthlyExpenses.personnel + 
                     gameState.financials.monthlyExpenses.facilities + 
@@ -638,31 +638,31 @@ function App() {
               </div>
             </div>
             
-            {/* Time information with enhanced styling */}
+            {/* Time information with more subdued styling */}
             <div className="flex items-center gap-3 bg-slate-800/50 px-4 py-2 rounded-lg border border-slate-700/50">
-              <div className="w-8 h-8 bg-blue-500/10 rounded-lg flex items-center justify-center">
-                <Clock className="text-cyan-400" size={20} />
+              <div className="w-7 h-7 bg-blue-500/10 rounded-lg flex items-center justify-center">
+                <Clock className="text-cyan-500/70" size={18} />
               </div>
               <div>
-                <div className="font-mono text-cyan-100 text-lg">
+                <div className="font-mono text-slate-400 text-base">
                   {gameState.date.toLocaleDateString('en-US', { year: 'numeric', month: 'long' })}
                 </div>
-                <div className="text-xs text-cyan-400/70">
+                <div className="text-xs text-cyan-500/60">
                   Turn {Math.floor((gameState.date.getTime() - new Date('2025-01-01').getTime()) / (30 * 24 * 60 * 60 * 1000)) + 1}
                 </div>
               </div>
             </div>
             
-            {/* Continue button with enhanced styling */}
+            {/* Continue button with more subdued styling */}
             <button
               onClick={handleAdvanceTime}
               disabled={!!activeModal}
-              className="bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 
+              className="bg-gradient-to-r from-blue-600/80 to-blue-700/80 hover:from-blue-600 hover:to-blue-700 
                         disabled:from-slate-700 disabled:to-slate-800 disabled:cursor-not-allowed 
-                        text-white font-bold py-2 px-6 rounded-lg flex items-center justify-center gap-2
-                        shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-all duration-200"
+                        text-white font-medium py-2 px-5 rounded-lg flex items-center justify-center gap-2
+                        shadow-md shadow-blue-500/10 hover:shadow-blue-500/20 transition-all duration-200"
             >
-              <ChevronRight size={16} />
+              <ChevronRight size={15} />
               Continue
             </button>
           </div>

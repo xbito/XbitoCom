@@ -14,6 +14,11 @@ const TimeControlPanel: React.FC<TimeControlPanelProps> = ({
   disabled
 }) => {
   const formatDate = (date: Date) => {
+    // Runtime validation
+    if (!(date instanceof Date)) {
+      throw new Error('Date must be a valid Date object');
+    }
+    
     return new Intl.DateTimeFormat('en-US', {
       year: 'numeric',
       month: 'long'
@@ -21,16 +26,16 @@ const TimeControlPanel: React.FC<TimeControlPanelProps> = ({
   };
 
   return (
-    <div className="fixed bottom-24 right-4 bg-gradient-to-b from-slate-800 to-slate-900 rounded-lg border border-slate-700/50 shadow-lg p-4 w-64">
+    <div className="fixed bottom-24 right-4 bg-gradient-to-b from-gray-900 to-gray-950 rounded-lg border border-gray-800 shadow-lg p-4 w-64">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-2">
-          <div className="w-7 h-7 bg-blue-500/10 rounded flex items-center justify-center">
-            <Clock className="text-cyan-400" size={16} />
+          <div className="w-7 h-7 bg-green-900/30 rounded flex items-center justify-center glow-sm">
+            <Clock className="text-green-400" size={16} />
           </div>
-          <h3 className="font-mono text-cyan-100">Time Control</h3>
+          <h3 className="font-mono text-green-300">Time Control</h3>
         </div>
-        <div className="font-mono text-lg text-cyan-400 tracking-wider">
+        <div className="font-mono text-lg text-green-400 tracking-wider glow-text">
           {gameState && gameState.date ? formatDate(gameState.date) : 'Loading...'}
         </div>
       </div>
@@ -47,10 +52,10 @@ const TimeControlPanel: React.FC<TimeControlPanelProps> = ({
       <button
         onClick={onAdvanceTime}
         disabled={disabled || !gameState}
-        className="w-full bg-gradient-to-r from-blue-500 to-blue-600 hover:from-blue-600 hover:to-blue-700 
-                  disabled:from-slate-700 disabled:to-slate-800 disabled:cursor-not-allowed
+        className="w-full bg-gradient-to-r from-green-800 to-green-900 hover:from-green-700 hover:to-green-800 
+                  disabled:from-gray-800 disabled:to-gray-900 disabled:cursor-not-allowed
                   text-white font-bold py-2 px-4 rounded-lg flex items-center justify-center gap-2
-                  shadow-lg shadow-blue-500/20 hover:shadow-blue-500/30 transition-all duration-200"
+                  shadow-lg shadow-green-900/30 hover:shadow-green-800/40 transition-all duration-200"
       >
         <Clock size={16} />
         Advance Month
