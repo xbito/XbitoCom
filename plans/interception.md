@@ -31,17 +31,24 @@ Radar coverage displays correctly on the map, with clearly shown radar strength 
 **Goal:** Design a system to track detected UFOs and generate UFO encounters.
 
 ### Tasks:
+- **UFO Spawn and Trajectory Generation**
+    - Starting from turn 2, each new turn will have a fixed random chance to spawn 1 UFO.
+    - The spawn chance will be based on configurable game parameters (excluding threat level since that mechanism is not defined yet).
+    - When a UFO spawns, immediately generate a random trajectory.
+    - The trajectory generation must include a runtime check to ensure it is within bounds of the map.
+    - The trajectory must cross at least 1 continent. It is a straight line, on any direction as long as it complies with the 1 continent rule.
+    - The length of the trajectory is from one border of the map to another, not necessarily the opposite.
+    - There is a fixed chance that the UFO's trajectory will intersect with the radar coverage area of one or more bases. The first UFO spawn should cross a radar coverage from a base with a very high chance.
+    - If an intersection occurs, detection is automatic and the UFO is flagged for observation.
+    - Add flight path visualization for detected UFOs.  The trajectory of the UFO is rendered in the map with a Darkish Red line and some shadow.
+    - Create simple animations for UFOs entering or leaving radar coverage. UFOs shouldn't travel that fast.
+
 - **UFO Detection Notifications**
     - Design a notification panel for new UFO detections.
-    - Add sound effects for different UFO threat levels.
-    - Create toast notifications for new detections with threat classification.
+    - Add sound effects for UFO detections.
+    - Create toast notifications confirming new detections when a trajectory crosses a radar.
     - Implement a UFO detail panel showing estimated size, speed, and mission type.
 
-- **UFO Movement Visualization**
-    - Add flight path visualization for tracked UFOs.
-    - Implement UFO movement logic with variable speeds and behaviors.
-    - Create animations for UFOs entering/leaving radar coverage.
-    - Add estimated trajectory prediction lines.
 
 **Verification:**  
 UI displays UFOs moving across the map with appropriate indicators; alerts appear when new UFOs are detected; player can view UFO details and predicted trajectories.
