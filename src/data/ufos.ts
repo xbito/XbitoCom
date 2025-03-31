@@ -1,4 +1,9 @@
-import { UFO, UFOType, UFOMission } from '../types';
+import { UFO, UFOType, GameState } from '../types';
+import { generateTrajectory } from '../utils/trajectory';
+
+const SPAWN_CHANCE = 0.3; // 30% chance per turn to spawn a UFO
+const FIRST_SPAWN_TURN = 2;
+const INITIAL_DATE = new Date('2025-01-01');
 
 export const UFO_TYPES: Record<UFOType, {
   name: string;
@@ -9,9 +14,6 @@ export const UFO_TYPES: Record<UFOType, {
   baseWeapons: number;
   baseStealth: number;
   threatLevel: number;
-  possibleMissions: UFOMission[];
-  researchValue: number;
-  salvageValue: number;
 }> = {
   scout: {
     name: 'Scout UFO',
@@ -21,10 +23,7 @@ export const UFO_TYPES: Record<UFOType, {
     baseArmor: 30,
     baseWeapons: 20,
     baseStealth: 80,
-    threatLevel: 1,
-    possibleMissions: ['reconnaissance', 'infiltration'],
-    researchValue: 500,
-    salvageValue: 200000
+    threatLevel: 1
   },
   fighter: {
     name: 'Fighter UFO',
@@ -34,10 +33,7 @@ export const UFO_TYPES: Record<UFOType, {
     baseArmor: 60,
     baseWeapons: 70,
     baseStealth: 50,
-    threatLevel: 2,
-    possibleMissions: ['attack', 'reconnaissance'],
-    researchValue: 800,
-    salvageValue: 500000
+    threatLevel: 2
   },
   transport: {
     name: 'Transport UFO',
@@ -47,10 +43,7 @@ export const UFO_TYPES: Record<UFOType, {
     baseArmor: 70,
     baseWeapons: 40,
     baseStealth: 30,
-    threatLevel: 3,
-    possibleMissions: ['abduction', 'infiltration'],
-    researchValue: 1000,
-    salvageValue: 800000
+    threatLevel: 3
   },
   harvester: {
     name: 'Harvester UFO',
@@ -60,10 +53,7 @@ export const UFO_TYPES: Record<UFOType, {
     baseArmor: 80,
     baseWeapons: 50,
     baseStealth: 40,
-    threatLevel: 3,
-    possibleMissions: ['harvest', 'abduction'],
-    researchValue: 1200,
-    salvageValue: 1000000
+    threatLevel: 3
   },
   mothership: {
     name: 'Mothership',
@@ -73,64 +63,81 @@ export const UFO_TYPES: Record<UFOType, {
     baseArmor: 100,
     baseWeapons: 100,
     baseStealth: 60,
-    threatLevel: 5,
-    possibleMissions: ['attack', 'abduction', 'harvest'],
-    researchValue: 2000,
-    salvageValue: 2000000
+    threatLevel: 5
   }
 };
 
-export const MISSION_DESCRIPTIONS: Record<UFOMission, string> = {
-  reconnaissance: 'Gathering intelligence on Earth defenses',
-  abduction: 'Capturing human subjects for experimentation',
-  attack: 'Direct assault on human installations',
-  harvest: 'Collecting Earth resources',
-  infiltration: 'Covert insertion of alien agents'
-};
+export function shouldSpawnUFO(gameState: GameState): boolean {
+  const currentTurn = Math.floor((gameState.date.getTime() - INITIAL_DATE.getTime()) / (30 * 24 * 60 * 60 * 1000)) + 1;
+  
+  console.log(`[UFO Spawn] Checking spawn on turn ${currentTurn}. Active UFOs: ${gameState.activeUFOs.length}`);
 
-export function generateUFO(
-  gameDate: Date,
-  threatLevel: number,
-  completedResearch: string[]
-): UFO {
-  // Calculate probability weights based on threat level and game progress
-  const weights = calculateTypeWeights(threatLevel, completedResearch);
+  // Force spawn takes precedence
+  if (gameState.forceUFOSpawn) {
+    console.log('[UFO Spawn] Force spawn enabled');
+    return true;
+  }
+
+  // First UFO should appear on turn 2 with 100% chance
+  if (currentTurn === FIRST_SPAWN_TURN && gameState.activeUFOs.length === 0) {
+    console.log('[UFO Spawn] First UFO spawn triggered on turn 2');
+    return true;
+  }
+
+  // Regular spawn chance for subsequent UFOs
+  const roll = Math.random();
+  console.log(`[UFO Spawn] Spawn roll: ${roll.toFixed(2)} < ${SPAWN_CHANCE}? ${roll < SPAWN_CHANCE}`);
+  return roll < SPAWN_CHANCE;
+}
+
+export function generateUFO(gameState: GameState): UFO {
+  const threatLevel = gameState.threatLevel;
   
-  // Select UFO type based on weights
-  const type = selectWeightedType(weights);
-  const ufoType = UFO_TYPES[type];
+  // Calculate type weights based on threat level
+  const typeWeights = calculateTypeWeights(threatLevel);
+  const selectedType = selectWeightedType(typeWeights);
   
-  // Select mission based on UFO type
-  const mission = ufoType.possibleMissions[
-    Math.floor(Math.random() * ufoType.possibleMissions.length)
-  ];
+  // Get type data
+  const typeData = UFO_TYPES[selectedType];
   
-  // Calculate advanced stats based on game progress
-  const progressMultiplier = 1 + (threatLevel * 0.1);
+  // Calculate UFO size variation (±10%)
+  const sizeVariation = 0.9 + Math.random() * 0.2;
   
-  // Generate random spawn location
-  const location = generateSpawnLocation();
+  // Calculate if this is first spawn
+  const currentTurn = Math.floor((gameState.date.getTime() - INITIAL_DATE.getTime()) / (30 * 24 * 60 * 60 * 1000)) + 1;
+  const isFirstSpawn = currentTurn === FIRST_SPAWN_TURN;
   
-  return {
+  // Create the UFO
+  const ufo: UFO = {
     id: crypto.randomUUID(),
-    type,
-    name: `${ufoType.name} ${Math.floor(Math.random() * 1000)}`,
-    size: ufoType.size,
-    speed: Math.floor(ufoType.baseSpeed * progressMultiplier),
-    armor: Math.floor(ufoType.baseArmor * progressMultiplier),
-    weapons: Math.floor(ufoType.baseWeapons * progressMultiplier),
-    stealthRating: Math.floor(ufoType.baseStealth * progressMultiplier),
+    type: selectedType,
+    name: `${typeData.name} ${crypto.randomUUID().slice(0, 4)}`,
+    size: Math.round(typeData.size * sizeVariation),
+    speed: typeData.baseSpeed,
+    armor: typeData.baseArmor,
+    weapons: typeData.baseWeapons,
+    stealthRating: typeData.baseStealth,
     status: 'approaching',
-    location,
-    mission,
+    location: { x: 0, y: 0, altitude: 10000 },
     detectedBy: null,
-    interceptedBy: null
+    interceptedBy: null,
+    progressPerTurn: Math.random() * 0.1 + 0.1,
+    isFirstSpawn
   };
+
+  // Generate trajectory
+  try {
+    ufo.trajectory = generateTrajectory(gameState.bases, isFirstSpawn);
+  } catch (error) {
+    console.error('[UFO Generation] Failed to generate trajectory:', error);
+    throw error;
+  }
+
+  return ufo;
 }
 
 function calculateTypeWeights(
-  threatLevel: number,
-  completedResearch: string[]
+  threatLevel: number
 ): Record<UFOType, number> {
   const weights: Record<UFOType, number> = {
     scout: 1,
@@ -146,16 +153,6 @@ function calculateTypeWeights(
   if (threatLevel >= 4) weights.harvester = 0.2;
   if (threatLevel >= 5) weights.mothership = 0.1;
 
-  // Increase weights based on research
-  if (completedResearch.includes('advanced-radar')) {
-    weights.fighter *= 1.2;
-    weights.transport *= 1.2;
-  }
-  if (completedResearch.includes('alien-propulsion')) {
-    weights.harvester *= 1.3;
-    weights.mothership *= 1.2;
-  }
-
   return weights;
 }
 
@@ -169,34 +166,4 @@ function selectWeightedType(weights: Record<UFOType, number>): UFOType {
   }
   
   return 'scout'; // Fallback
-}
-
-function generateSpawnLocation() {
-  // Generate random edge location
-  const edge = Math.floor(Math.random() * 4); // 0: top, 1: right, 2: bottom, 3: left
-  let x, y;
-  
-  switch (edge) {
-    case 0: // top
-      x = Math.random() * 100;
-      y = 0;
-      break;
-    case 1: // right
-      x = 100;
-      y = Math.random() * 100;
-      break;
-    case 2: // bottom
-      x = Math.random() * 100;
-      y = 100;
-      break;
-    default: // left
-      x = 0;
-      y = Math.random() * 100;
-  }
-  
-  return {
-    x,
-    y,
-    altitude: 30000 + Math.random() * 20000 // Between 30,000 and 50,000 feet
-  };
 }

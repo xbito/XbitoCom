@@ -12,11 +12,14 @@ import EventModal from './components/EventModal';
 import YearlyReviewModal from './components/YearlyReviewModal';
 import HangarModal from './components/HangarModal';
 import ConfirmationDialog from './components/ConfirmationDialog';
-import { GameState, Base, Continent, Personnel, ResearchProject, Transaction } from './types';
+import { GameState, Base, Continent, Personnel, ResearchProject, Transaction, UFO } from './types';
 import { FACILITY_TYPES, upgradeBarracks } from './data/facilities';
 import { BASE_SALARIES } from './data/personnel';
 import { MONTHLY_EVENTS, GameEvent, evaluateYearlyPerformance, YearlyReview } from './data/events';
 import { hasCapacityForNewFacility, canAssignPersonnelToFacility, calculateFacilityPersonnelCapacity } from './data/basePersonnel';
+import { doesTrajectoryIntersectRadar } from './utils/trajectory';
+import { shouldSpawnUFO, generateUFO } from './data/ufos';
+import DebugPanel from './components/DebugPanel';
 
 function App() {
   const [gameState, setGameState] = useState<GameState>({
@@ -523,24 +526,90 @@ function App() {
 
     // Actions were performed or user confirmed, proceed with turn advancement
     setGameState(prev => {
-      const newDate = new Date(prev.date);
-      newDate.setMonth(newDate.getMonth() + 1);
+      let updatedState = {
+        ...prev,
+        date: new Date(prev.date.getTime() + 30 * 24 * 60 * 60 * 1000), // Advance one month
+      };
+
+      // Process UFO detections first
+      const [detectedNew, undetectedUFOs] = updatedState.activeUFOs.reduce(
+        ([detected, undetected], ufo) => {
+          if (ufo.detectedBy) {
+            undetected.push(ufo);
+          } else {
+            // Check if UFO trajectory intersects with any base's radar
+            const detectingBase = updatedState.bases.find(base => 
+              base.facilities.some(f => f.type === 'radar') && 
+              doesTrajectoryIntersectRadar(ufo.trajectory!, base)
+            );
+
+            if (detectingBase) {
+              console.log(`[UFO Detection] ${ufo.name} detected by base ${detectingBase.name}`);
+              detected.push({
+                ...ufo,
+                detectedBy: detectingBase.id,
+                status: 'detected'
+              });
+            } else {
+              undetected.push(ufo);
+            }
+          }
+          return [detected, undetected];
+        },
+        [[] as UFO[], [] as UFO[]]
+      );
+
+      // Remove UFOs that have completed their trajectory
+      const [completedUFOs, remainingUFOs] = undetectedUFOs.reduce(
+        ([completed, remaining], ufo) => {
+          if (ufo.trajectory?.progress === 1) {
+            completed.push({ ...ufo, status: 'escaped' });
+          } else {
+            remaining.push(ufo);
+          }
+          return [completed, remaining];
+        },
+        [[] as UFO[], [] as UFO[]]
+      );
+
+      // Check for new UFO spawns
+      if (shouldSpawnUFO(updatedState)) {
+        const newUFO = generateUFO(updatedState);
+        console.log('[UFO Spawn] New UFO generated:', newUFO.name);
+        
+        // Check if the new UFO is immediately detected
+        const detectingBase = updatedState.bases.find(base => 
+          base.facilities.some(f => f.type === 'radar') && 
+          doesTrajectoryIntersectRadar(newUFO.trajectory!, base)
+        );
+
+        if (detectingBase) {
+          console.log(`[UFO Detection] ${newUFO.name} immediately detected by base ${detectingBase.name}`);
+          detectedNew.push({
+            ...newUFO,
+            detectedBy: detectingBase.id,
+            status: 'detected'
+          });
+        } else {
+          remainingUFOs.push(newUFO);
+        }
+      }
+
+      updatedState = {
+        ...updatedState,
+        activeUFOs: remainingUFOs,
+        detectedUFOs: [...updatedState.detectedUFOs, ...detectedNew],
+        escapedUFOs: [...updatedState.escapedUFOs, ...completedUFOs]
+      };
 
       // Apply monthly income and expenses
-      const monthlyBalance = prev.financials.monthlyIncome - 
-        Object.values(prev.financials.monthlyExpenses).reduce((a, b) => a + b, 0);
+      Object.values(updatedState.financials.monthlyExpenses).reduce((a, b) => a + b, 0);
 
       // Check for random events
       const possibleEvents = MONTHLY_EVENTS.filter(
         event => Math.random() < event.probability
       );
       
-      let updatedState = {
-        ...prev,
-        date: newDate,
-        funds: prev.funds + monthlyBalance,
-      };
-
       // Apply random event if any
       if (possibleEvents.length > 0) {
         const selectedEvent = possibleEvents[Math.floor(Math.random() * possibleEvents.length)];
@@ -549,8 +618,8 @@ function App() {
         setCurrentEvent({ event: selectedEvent, message });
       }
 
-      // Check for year end
-      if (newDate.getMonth() === 0) {
+      // Check for yearly review
+      if (updatedState.date.getMonth() === 11) { // December
         const review = evaluateYearlyPerformance(updatedState);
         setYearlyReview(review);
 
@@ -568,6 +637,15 @@ function App() {
         review.bonuses.forEach(bonus => {
           updatedState = bonus.effect(updatedState);
         });
+      }
+
+      // Reset force spawn after it's used
+      if (prev.forceUFOSpawn) {
+        updatedState = {
+          ...updatedState,
+          forceUFOSpawn: false
+        };
+        console.log('[Debug] Force UFO spawn consumed');
       }
 
       // Reset the action tracking for the new turn
@@ -595,6 +673,40 @@ function App() {
       ...prev,
       showRadarCoverage: !prev.showRadarCoverage
     }));
+  }, []);
+
+  const handleToggleUFODebug = useCallback(() => {
+    setGameState(prev => ({
+      ...prev,
+      showAllUFOTrajectories: !prev.showAllUFOTrajectories
+    }));
+  }, []);
+
+  // Add debug panel visibility state
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key.toLowerCase() === 'd') {
+        e.preventDefault();
+        setGameState(prev => ({
+          ...prev,
+          debugPanelVisible: !prev.debugPanelVisible
+        }));
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
+  const handleToggleForceSpawn = useCallback(() => {
+    setGameState(prev => {
+      const newState = {
+        ...prev,
+        forceUFOSpawn: !prev.forceUFOSpawn
+      };
+      console.log(`[Debug] Force UFO spawn ${newState.forceUFOSpawn ? 'enabled' : 'disabled'}`);
+      return newState;
+    });
   }, []);
 
   return (
@@ -676,6 +788,10 @@ function App() {
             onBaseClick={handleBaseClick}
             onContinentSelect={!activeModal ? handleContinentSelect : undefined}
             showRadarCoverage={gameState.showRadarCoverage}
+            activeUFOs={gameState.activeUFOs}
+            detectedUFOs={gameState.detectedUFOs}
+            onUFOClick={() => {}} // We'll implement this later
+            showAllUFOTrajectories={gameState.showAllUFOTrajectories}
           />
         </div>
         <SidePanel 
@@ -777,6 +893,15 @@ function App() {
         message="You haven't performed any actions this turn. Are you sure you want to continue to the next month?"
         confirmText="Continue Anyway"
         cancelText="Go Back"
+      />
+
+      {/* Add debug panel */}
+      <DebugPanel
+        isVisible={gameState.debugPanelVisible ?? false}
+        gameState={gameState}
+        onToggleRadar={handleToggleRadar}
+        onToggleUFOPaths={handleToggleUFODebug}
+        onToggleForceSpawn={handleToggleForceSpawn}
       />
     </div>
   );

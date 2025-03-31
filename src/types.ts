@@ -133,6 +133,19 @@ export interface FacilityType {
   baseEffectiveness?: number; // Base radar effectiveness multiplier
 }
 
+export interface Point2D {
+  x: number;
+  y: number;
+}
+
+export interface Trajectory {
+  start: Point2D;
+  end: Point2D;
+  progress: number;
+  currentPosition: Point2D;
+  crossedContinents?: string[]; // List of continent IDs that the trajectory crosses
+}
+
 export interface UFO {
   id: string;
   type: UFOType;
@@ -148,9 +161,11 @@ export interface UFO {
     y: number;
     altitude: number;
   };
-  mission: UFOMission;
   detectedBy: string | null; // Base ID that detected it
   interceptedBy: string | null; // Vehicle ID that's intercepting it
+  trajectory?: Trajectory;
+  isFirstSpawn?: boolean; // Flag for first UFO spawn special handling
+  progressPerTurn: number; // How much the UFO moves along its trajectory each turn
 }
 
 export type UFOType = 
@@ -167,13 +182,6 @@ export type UFOStatus =
   | 'escaped'
   | 'destroyed'
   | 'landed';
-
-export type UFOMission =
-  | 'reconnaissance'
-  | 'abduction'
-  | 'attack'
-  | 'harvest'
-  | 'infiltration';
 
 export interface GameState {
   funds: number;
@@ -201,6 +209,9 @@ export interface GameState {
     transactions: Transaction[];
   };
   showRadarCoverage: boolean;
+  showAllUFOTrajectories?: boolean;
+  forceUFOSpawn?: boolean;
+  debugPanelVisible?: boolean;
 }
 
 export interface Continent {

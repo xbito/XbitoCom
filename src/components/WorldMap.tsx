@@ -1,40 +1,114 @@
-import React, { useState } from 'react';
-import { Base, Continent } from '../types';
+import React, { useState, useRef, useEffect } from 'react';
+import { Base, Continent, UFO, Point2D } from '../types';
 import { CONTINENTS } from '../data/continents';
+import { AlertCircle } from 'lucide-react';
+
+// Animation speed in pixels per second
+const UFO_SPEED = 50;
 
 interface WorldMapProps {
   bases: Base[];
   onBaseClick: (base: Base) => void;
   onContinentSelect?: (continent: Continent) => void;
   showRadarCoverage?: boolean;
+  showAllUFOTrajectories?: boolean;
+  activeUFOs?: UFO[];
+  detectedUFOs?: UFO[];
+  onUFOClick?: (ufo: UFO) => void;
 }
 
 const WorldMap: React.FC<WorldMapProps> = ({
   bases,
   onBaseClick,
   onContinentSelect,
-  showRadarCoverage = false
+  showRadarCoverage = false,
+  showAllUFOTrajectories = false,
+  activeUFOs = [],
+  detectedUFOs = [],
+  onUFOClick
 }) => {
   const [hoveredContinent, setHoveredContinent] = useState<Continent | null>(null);
+  const [hoveredUFO, setHoveredUFO] = useState<UFO | null>(null);
+  const [radarIntersections, setRadarIntersections] = useState<{[key: string]: { x: number, y: number }[]}>({});
+  const animationFrameRef = useRef<number>();
+  const lastTimeRef = useRef<number>(0);
 
   // Calculate radar coverage radius based on radar level and effectiveness
   const getRadarRadius = (base: Base): number => {
     const radarFacility = base.facilities.find(f => f.type === 'radar');
     if (!radarFacility) return 0;
     
-    const baseRange = 60; // Increased base radius for better visibility
-    const radarBonus = radarFacility.level * 0.2; // 20% per level
+    const baseRange = 60;
+    const radarBonus = radarFacility.level * 0.2;
     return baseRange * (1 + radarBonus);
   };
 
-  // Get radar coverage opacity based on facility level
+  // Check if a point is inside radar coverage
+  const isInRadarCoverage = (point: Point2D, base: Base): boolean => {
+    const position = getBasePosition(base);
+    const radius = getRadarRadius(base);
+    const dx = point.x - position.x;
+    const dy = point.y - position.y;
+    return (dx * dx + dy * dy) <= radius * radius;
+  };
+
+  // Calculate radar opacity based on radar level
   const getRadarOpacity = (base: Base): number => {
     const radarFacility = base.facilities.find(f => f.type === 'radar');
     if (!radarFacility) return 0;
-    
-    // Increased base opacity for better visibility (0.25 to 0.45)
-    return 0.25 + (radarFacility.level * 0.05);
+    return 0.3 + (radarFacility.level * 0.1); // Base opacity 0.3, increasing by 0.1 per level
   };
+
+  // Animation loop
+  useEffect(() => {
+    const animate = (timestamp: number) => {
+      if (!lastTimeRef.current) lastTimeRef.current = timestamp;
+      const deltaTime = timestamp - lastTimeRef.current;
+      lastTimeRef.current = timestamp;
+
+      // Update UFO positions and check radar intersections
+      const newIntersections: {[key: string]: { x: number, y: number }[]} = {};
+
+      [...activeUFOs, ...detectedUFOs].forEach(ufo => {
+        if (!ufo.trajectory) return;
+
+        // Calculate new position based on speed and time
+        const progress = ufo.trajectory.progress + (deltaTime / 1000) * (UFO_SPEED / 1000);
+        
+        if (progress <= 1) {
+          const currentX = ufo.trajectory.start.x + (ufo.trajectory.end.x - ufo.trajectory.start.x) * progress;
+          const currentY = ufo.trajectory.start.y + (ufo.trajectory.end.y - ufo.trajectory.start.y) * progress;
+          
+          // Check radar intersections if radar coverage is shown
+          if (showRadarCoverage) {
+            bases.forEach(base => {
+              if (isInRadarCoverage({ x: currentX, y: currentY }, base)) {
+                if (!newIntersections[ufo.id]) {
+                  newIntersections[ufo.id] = [];
+                }
+                newIntersections[ufo.id].push({ x: currentX, y: currentY });
+              }
+            });
+          }
+
+          // Update UFO position
+          ufo.trajectory.progress = progress;
+          ufo.trajectory.currentPosition = { x: currentX, y: currentY };
+        }
+      });
+
+      setRadarIntersections(newIntersections);
+      animationFrameRef.current = requestAnimationFrame(animate);
+    };
+
+    animationFrameRef.current = requestAnimationFrame(animate);
+
+    return () => {
+      if (animationFrameRef.current) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+    };
+  }, [activeUFOs, detectedUFOs, bases, showRadarCoverage]);
 
   const handleMapClick = (e: React.MouseEvent<SVGElement>) => {
     if (!onContinentSelect) return;
@@ -70,6 +144,100 @@ const WorldMap: React.FC<WorldMapProps> = ({
       x: (x / 100) * 1000,
       y: (y / 100) * 500
     };
+  };
+
+  // Render UFO icon and trajectory
+  const renderUFO = (ufo: UFO, isDetected: boolean) => {
+    if (!ufo.trajectory) return null;
+
+    const ufoSize = 4 + ufo.size * 2;
+    const position = ufo.trajectory.currentPosition;
+    
+    return (
+      <g key={ufo.id} className="ufo-group">
+        {/* UFO Trajectory line */}
+        {(isDetected || showAllUFOTrajectories) && (
+          <path
+            d={`M ${ufo.trajectory.start.x} ${ufo.trajectory.start.y} L ${ufo.trajectory.end.x} ${ufo.trajectory.end.y}`}
+            stroke={isDetected ? "#ef4444" : "#666666"}
+            strokeWidth={isDetected ? "2" : "1"}
+            strokeDasharray={isDetected ? "4 4" : "1 2"}
+            className="opacity-50"
+            filter="url(#glow)"
+          />
+        )}
+
+        {/* UFO icon and detection effects */}
+        {(isDetected || showAllUFOTrajectories) && (
+          <g
+            transform={`translate(${position.x} ${position.y})`}
+            onClick={() => onUFOClick?.(ufo)}
+            onMouseEnter={() => setHoveredUFO(ufo)}
+            onMouseLeave={() => setHoveredUFO(null)}
+            className="cursor-pointer"
+          >
+            {/* UFO detection radius for undetected UFOs */}
+            {!isDetected && showAllUFOTrajectories && (
+              <circle
+                r={ufoSize * 3}
+                fill="none"
+                stroke="#666666"
+                strokeWidth="1"
+                strokeDasharray="2 4"
+                className="opacity-30"
+              />
+            )}
+
+            {/* UFO icon */}
+            <circle
+              r={ufoSize}
+              fill={isDetected ? "#ef4444" : "#666666"}
+              className={`${isDetected ? "animate-pulse" : ""} transition-all duration-300`}
+              filter={hoveredUFO?.id === ufo.id ? "url(#strongGlow)" : "url(#glow)"}
+            />
+
+            {/* Alert indicator for detected UFOs */}
+            {isDetected && (
+              <g transform={`translate(${ufoSize * 1.5} ${-ufoSize * 1.5})`}>
+                <AlertCircle size={16} className="text-red-500 animate-pulse" />
+              </g>
+            )}
+
+            {/* Radar intersection effect */}
+            {showRadarCoverage && radarIntersections[ufo.id]?.map((_, index) => (
+              <circle
+                key={`intersection-${index}`}
+                cx={0}
+                cy={0}
+                r={ufoSize * 2}
+                fill="none"
+                stroke="#22c55e"
+                strokeWidth="2"
+                className="animate-ping"
+              />
+            ))}
+          </g>
+        )}
+
+        {/* UFO info tooltip */}
+        {hoveredUFO?.id === ufo.id && (isDetected || showAllUFOTrajectories) && (
+          <foreignObject
+            x={position.x + ufoSize * 2}
+            y={position.y - 60}
+            width={200}
+            height={120}
+            className="pointer-events-none"
+          >
+            <div className="bg-black/80 text-white p-2 rounded text-sm border border-red-500/30">
+              <div className="font-bold">{ufo.name}</div>
+              <div>Type: {ufo.type}</div>
+              <div>Speed: {ufo.speed}</div>
+              <div>Status: {ufo.status}</div>
+            </div>
+          </foreignObject>
+        )}
+      </g>
+    );
   };
 
   return (
@@ -218,7 +386,7 @@ const WorldMap: React.FC<WorldMapProps> = ({
           onMouseLeave={() => setHoveredContinent(null)}
         />
 
-        {/* Enhanced Radar Coverage with green color scheme */}
+        {/* Render Radar Coverage */}
         {showRadarCoverage && bases.map((base) => {
           const position = getBasePosition(base);
           const radius = getRadarRadius(base);
@@ -297,6 +465,10 @@ const WorldMap: React.FC<WorldMapProps> = ({
             </g>
           );
         })}
+
+        {/* Render UFOs */}
+        {activeUFOs.map(ufo => renderUFO(ufo, false))}
+        {detectedUFOs.map(ufo => renderUFO(ufo, true))}
 
         {/* Bases with enhanced visualization and glow effect */}
         {bases.map((base) => {
