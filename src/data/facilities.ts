@@ -59,7 +59,7 @@ export const FACILITY_TYPES: Record<string, FacilityType> = {
     baseMaintenance: 15000,
     upgradeMultiplier: 1.6,
     size: 1,
-    baseRadarRange: 1000, // Base radar range in km
+    baseRadarRange: 1200, // Increased from 1000 to 1200 (20% more)
     baseEffectiveness: 1.0 // Base effectiveness multiplier
   },
   defense: {
