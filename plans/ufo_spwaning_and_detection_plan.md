@@ -60,8 +60,30 @@ UI displays UFOs moving across the map with appropriate indicators; alerts appea
 **Goal:** Check the existing UFO types and add new ones as needed
 
 ### Tasks:
+- **UFO Types Review**
+    - Review existing UFO types in the game to ensure they are well-defined and distinct.
+    - Ensure each UFO type has unique characteristics (size, speed, armor, weapons, stealth, automated (no alien pilot), crew size (0 if automated)) that affect gameplay.
+    - Add new UFO types if necessary to enhance variety and challenge.
+    - Do not implement UFO levels but leave the scaffolding for it. Levels will be added later as part of the game progression system. The idea is that a scout at turn 2 will be weaker than a scout at turn 20, but they are still the same type. The level will be a hidden attribute that only affects stats like speed, armor, and damage.
+    - Ensure that the new UFO types are integrated into the existing spawning and detection systems, allowing for dynamic gameplay and varied encounters.
+    - Beside UFOs only spawning under certain threat levels, they can also affect the threat level of the game. For example, a "Scout" UFO might not increase the threat level, while a "Battleship" or "Mothership" would significantly raise it. This will be implemented in a later phase, but the groundwork should be laid now.
+    - Each continent reacts differently to a flyover of a UFO. For example, a "Scout" UFO might cause minor panic or curiosity, while a "Battleship" or "Mothership" would cause widespread panic and unrest. This will be implemented in a later phase, but the groundwork should be laid now.
+    - The game will have an Encyclopedia like "Encarta" or "Wikipedia" for UFOs, where players can view current information about each UFO type that they have encountered. At first the details will be limited, but the more encounters the more details will be revealed. There should be certain lore elements for each UFO type, such as origin, purpose, and conspiracy theories. This will be a living document that evolves as the player progresses through the game. Create the data for this Encyclopedia for each UFO type so we can document their characteristics and lore and use it in the feature later.
+
+- **UFO Visualization Review**
+    - Review the current UFO visualizations to ensure they are distinct and visually appealing.
+    - Add shape and color as properties for all UFO types.
+    - Ensure that each UFO type has a unique appearance that matches its characteristics (e.g., size, shape, color).
+    - Add new visual effects if necessary to enhance the appearance of new UFO types.
+
+- **UFO properties revamp**
+    - Ensure that stealth is a hidden attribute of the UFO that affects detection probability. Stealth should be a percentage value that reduces the effective radar range when calculating detection chances. For example, a UFO with 50% stealth will only be detected at half the radar range.
+    - Implement a stealth detection mechanic that allows advanced radar systems or specific research projects to counteract UFO stealth. This means that even if a UFO has stealth, it can still be detected if the radar system is advanced enough or if the player has researched specific technologies.
+    - Add a "jamming" property to certain UFO types that can interfere with radar detection. Jamming should be a percentage value that reduces the effective radar range by a certain amount. For example, a UFO with 30% jamming will reduce the radar range by 30% when calculating detection chances.
 
 
+**erification:**
+Different UFO types appear with distinct visuals; UFO information panel shows type-specific details; stealth attributes meaningfully affect detection mechanics; players can recognize patterns in UFO behavior.
 
 ---
 
