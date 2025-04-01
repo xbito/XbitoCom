@@ -64,6 +64,26 @@ export const UFO_TYPES: Record<UFOType, {
     baseWeapons: 100,
     baseStealth: 60,
     threatLevel: 5
+  },
+  science: {
+    name: 'Science Vessel',
+    description: 'Advanced research and experimentation craft',
+    size: 2,
+    baseSpeed: 70,
+    baseArmor: 50,
+    baseWeapons: 30,
+    baseStealth: 90,
+    threatLevel: 2
+  },
+  builder: {
+    name: 'Builder UFO',
+    description: 'Constructs and repairs alien structures',
+    size: 3,
+    baseSpeed: 60,
+    baseArmor: 40,
+    baseWeapons: 20,
+    baseStealth: 70,
+    threatLevel: 2
   }
 };
 
@@ -136,26 +156,51 @@ export function generateUFO(gameState: GameState): UFO {
   return ufo;
 }
 
+// Utility functions for UFO type weights and selection
+/**
+ * Calculate type weights based on the current threat level.
+ * @param threatLevel The current threat level in the game
+ * @returns A record of UFO types with their corresponding weights
+ */
 function calculateTypeWeights(
   threatLevel: number
 ): Record<UFOType, number> {
+  // Initial weights for each UFO type at threat level 0
   const weights: Record<UFOType, number> = {
     scout: 1,
     fighter: 0,
     transport: 0,
     harvester: 0,
-    mothership: 0
+    mothership: 0,
+    science: 0,
+    builder: 0
   };
 
   // Adjust weights based on threat level
-  if (threatLevel >= 2) weights.fighter = 0.5;
-  if (threatLevel >= 3) weights.transport = 0.3;
-  if (threatLevel >= 4) weights.harvester = 0.2;
-  if (threatLevel >= 5) weights.mothership = 0.1;
+  if (threatLevel >= 2) { 
+    weights.fighter = 0.5;
+    weights.science = 0.4;
+  }
+  if (threatLevel >= 3) {
+    weights.builder = 0.3;
+    weights.transport = 0.3;
+  } 
+  if (threatLevel >= 4) {
+    weights.harvester = 0.2;
+  }
+  if (threatLevel >= 5) {
+    weights.mothership = 0.1;
+  }
 
   return weights;
 }
 
+// Function to select a UFO type based on weighted probabilities
+/**
+ * Select a UFO type based on weighted probabilities.
+ * @param weights A record of UFO types with their corresponding weights
+ * @returns The selected UFO type
+ */
 function selectWeightedType(weights: Record<UFOType, number>): UFOType {
   const totalWeight = Object.values(weights).reduce((a, b) => a + b, 0);
   let random = Math.random() * totalWeight;

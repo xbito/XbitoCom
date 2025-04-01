@@ -173,7 +173,9 @@ export type UFOType =
   | 'fighter'
   | 'transport'
   | 'harvester'
-  | 'mothership';
+  | 'mothership'
+  | 'science'
+  | 'builder';
 
 export type UFOStatus =
   | 'approaching'
