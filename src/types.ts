@@ -1,4 +1,4 @@
-// Existing imports...
+import { UFOShape, UFOColor } from './data/visual';
 
 export interface Base {
   id: string;
@@ -146,6 +146,21 @@ export interface Trajectory {
   crossedContinents?: string[]; // List of continent IDs that the trajectory crosses
 }
 
+export interface UFOTypeDefinition {
+  name: string;
+  description: string;
+  size: number;
+  baseSpeed: number;
+  baseArmor: number;
+  baseWeapons: number;
+  baseStealth: number;
+  threatLevel: number;
+  automated: boolean;
+  crewRequirements?: UFOCrewRequirements;
+  shape: UFOShape;
+  color: UFOColor;
+}
+
 export interface UFO {
   id: string;
   type: UFOType;
@@ -166,6 +181,10 @@ export interface UFO {
   trajectory?: Trajectory;
   isFirstSpawn?: boolean; // Flag for first UFO spawn special handling
   progressPerTurn: number; // How much the UFO moves along its trajectory each turn
+  automated: boolean;
+  crewRequirements?: UFOCrewRequirements;
+  shape: UFOShape;
+  color: UFOColor;
 }
 
 export type UFOType = 
@@ -229,6 +248,7 @@ export interface Continent {
   personnelMultiplier: number;
   researchMultiplier: number;
   defenseMultiplier: number;
+  loreId: string;
 }
 
 export interface ResearchProject {
@@ -274,3 +294,17 @@ export type TransactionCategory =
   | 'equipment'
   | 'maintenance'
   | 'other';
+
+export interface UFOCrewRequirements {
+  // Minimum required crew
+  pilots?: number;
+  engineers?: number;
+  scientists?: number;
+  // Maximum capacity per role
+  maxPilots?: number;
+  maxEngineers?: number;
+  maxScientists?: number;
+  maxSoldiers?: number; // For boarding parties
+  // Total crew capacity
+  totalCapacity?: number;
+}

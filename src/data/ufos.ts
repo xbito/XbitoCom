@@ -1,89 +1,157 @@
-import { UFO, UFOType, GameState } from '../types';
+import { UFO, UFOType, GameState, UFOTypeDefinition } from '../types';
 import { generateTrajectory } from '../utils/trajectory';
+import { UFO_COLORS } from './visual';
 
-const SPAWN_CHANCE = 0.3; // 30% chance per turn to spawn a UFO
+const SPAWN_CHANCE = 0.3;
 const FIRST_SPAWN_TURN = 2;
 const INITIAL_DATE = new Date('2025-01-01');
 
-export const UFO_TYPES: Record<UFOType, {
-  name: string;
-  description: string;
-  size: number;
-  baseSpeed: number;
-  baseArmor: number;
-  baseWeapons: number;
-  baseStealth: number;
-  threatLevel: number;
-}> = {
+export const UFO_TYPES: Record<UFOType, UFOTypeDefinition> = {
   scout: {
     name: 'Scout UFO',
-    description: 'Small, fast reconnaissance craft',
+    description: 'Small, fast reconnaissance craft designed for stealth observation. Often automated.',
     size: 1,
     baseSpeed: 90,
     baseArmor: 30,
     baseWeapons: 20,
     baseStealth: 80,
-    threatLevel: 1
+    threatLevel: 1,
+    automated: true,
+    shape: 'triangle',
+    color: UFO_COLORS.SCOUT_BLUE,
+    crewRequirements: {
+      pilots: 1,
+      maxPilots: 2,
+      maxScientists: 2,
+      totalCapacity: 4
+    }
   },
   fighter: {
     name: 'Fighter UFO',
-    description: 'Aggressive combat vessel',
+    description: 'Aggressive combat vessel with advanced weapons systems.',
     size: 2,
     baseSpeed: 80,
     baseArmor: 60,
     baseWeapons: 70,
     baseStealth: 50,
-    threatLevel: 2
+    threatLevel: 2,
+    automated: false,
+    crewRequirements: {
+      pilots: 1,
+      engineers: 1,
+      maxPilots: 2,
+      maxEngineers: 2,
+      maxSoldiers: 2,
+      totalCapacity: 6
+    },
+    shape: 'diamond',
+    color: UFO_COLORS.FIGHTER_RED
   },
   transport: {
     name: 'Transport UFO',
-    description: 'Large vessel for moving alien forces',
+    description: 'Large vessel for moving alien forces and equipment.',
     size: 3,
     baseSpeed: 50,
     baseArmor: 70,
     baseWeapons: 40,
     baseStealth: 30,
-    threatLevel: 3
+    threatLevel: 3,
+    automated: false,
+    crewRequirements: {
+      pilots: 2,
+      engineers: 1,
+      maxPilots: 3,
+      maxEngineers: 3,
+      maxScientists: 4,
+      maxSoldiers: 8,
+      totalCapacity: 15
+    },
+    shape: 'rectangle',
+    color: UFO_COLORS.TRANSPORT_GRAY
   },
   harvester: {
     name: 'Harvester UFO',
-    description: 'Resource collection vessel',
+    description: 'Resource collection vessel with specialized equipment.',
     size: 4,
     baseSpeed: 40,
     baseArmor: 80,
     baseWeapons: 50,
     baseStealth: 40,
-    threatLevel: 3
+    threatLevel: 3,
+    automated: false,
+    crewRequirements: {
+      pilots: 2,
+      engineers: 2,
+      scientists: 1,
+      maxPilots: 4,
+      maxEngineers: 4,
+      maxScientists: 3,
+      maxSoldiers: 6,
+      totalCapacity: 12
+    },
+    shape: 'hexagon',
+    color: UFO_COLORS.HARVESTER_PURPLE
   },
   mothership: {
     name: 'Mothership',
-    description: 'Massive command and control vessel',
+    description: 'Massive command and control vessel, housing alien leadership.',
     size: 5,
     baseSpeed: 30,
     baseArmor: 100,
     baseWeapons: 100,
     baseStealth: 60,
-    threatLevel: 5
+    threatLevel: 5,
+    automated: false,
+    crewRequirements: {
+      pilots: 4,
+      engineers: 3,
+      scientists: 2,
+      maxPilots: 8,
+      maxEngineers: 6,
+      maxScientists: 6,
+      maxSoldiers: 20,
+      totalCapacity: 40
+    },
+    shape: 'circle',
+    color: UFO_COLORS.MOTHERSHIP_GOLD
   },
   science: {
     name: 'Science Vessel',
-    description: 'Advanced research and experimentation craft',
+    description: 'Advanced research and experimentation craft with cloaking capabilities.',
     size: 2,
     baseSpeed: 70,
     baseArmor: 50,
     baseWeapons: 30,
     baseStealth: 90,
-    threatLevel: 2
+    threatLevel: 2,
+    automated: false,
+    crewRequirements: {
+      pilots: 1,
+      scientists: 3,
+      maxPilots: 2,
+      maxEngineers: 2,
+      maxScientists: 6,
+      maxSoldiers: 4,
+      totalCapacity: 10
+    },
+    shape: 'pentagon',
+    color: UFO_COLORS.SCIENCE_GREEN
   },
   builder: {
     name: 'Builder UFO',
-    description: 'Constructs and repairs alien structures',
+    description: 'Constructs and repairs alien structures. Highly automated.',
     size: 3,
     baseSpeed: 60,
     baseArmor: 40,
     baseWeapons: 20,
     baseStealth: 70,
-    threatLevel: 2
+    threatLevel: 2,
+    automated: true,
+    crewRequirements: {
+      totalCapacity: 0 // Automated, no crew capacity
+    },
+    shape: 'octagon',
+    color: UFO_COLORS.BUILDER_ORANGE
   }
 };
 
@@ -142,7 +210,11 @@ export function generateUFO(gameState: GameState): UFO {
     detectedBy: null,
     interceptedBy: null,
     progressPerTurn: Math.random() * 0.1 + 0.1,
-    isFirstSpawn
+    isFirstSpawn,
+    automated: typeData.automated,
+    crewRequirements: typeData.crewRequirements,
+    shape: typeData.shape,
+    color: typeData.color
   };
 
   // Generate trajectory

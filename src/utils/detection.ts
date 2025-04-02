@@ -1,4 +1,5 @@
-import { Base, UFO } from '../types';
+import { Base, UFO, Continent } from '../types';
+import { CONTINENT_LORE } from '../data/continentLore';
 
 export function checkRadarDetection(ufo: UFO, base: Base): boolean {
   // Calculate base radar effectiveness
@@ -53,4 +54,23 @@ function calculateDetectionProbability(
   
   // Ensure probability is between 0 and 1
   return Math.max(0, Math.min(1, probability));
+}
+
+export function calculateContinentReaction(continent: Continent, ufo: UFO): { reactionLevel: number; description: string } {
+  const lore = CONTINENT_LORE[continent.loreId];
+  if (!lore) {
+    console.warn(`No lore found for continent ${continent.id}`);
+    return { reactionLevel: 50, description: 'Standard reaction to UFO presence.' };
+  }
+
+  const reaction = lore.reactions.find(r => r.ufoType === ufo.type);
+  if (!reaction) {
+    console.warn(`No reaction defined for UFO type ${ufo.type} in continent ${continent.id}`);
+    return { reactionLevel: 50, description: 'Unknown UFO type encountered.' };
+  }
+
+  return {
+    reactionLevel: reaction.reactionLevel,
+    description: reaction.description
+  };
 }

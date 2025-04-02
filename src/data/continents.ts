@@ -14,6 +14,7 @@ export const CONTINENTS: Record<string, Continent> = {
       x2: 35,
       y2: 44,
     },
+    loreId: 'northAmerica'
   },
   southAmerica: {
     id: 'southAmerica',
@@ -28,6 +29,7 @@ export const CONTINENTS: Record<string, Continent> = {
       x2: 32,
       y2: 84,
     },
+    loreId: 'southAmerica'
   },
   europe: {
     id: 'europe',
@@ -42,6 +44,7 @@ export const CONTINENTS: Record<string, Continent> = {
       x2: 58,
       y2: 36,
     },
+    loreId: 'europe'
   },
   asia: {
     id: 'asia',
@@ -56,6 +59,7 @@ export const CONTINENTS: Record<string, Continent> = {
       x2: 85,
       y2: 64,
     },
+    loreId: 'asia'
   },
   africa: {
     id: 'africa',
@@ -70,6 +74,7 @@ export const CONTINENTS: Record<string, Continent> = {
       x2: 58,
       y2: 70,
     },
+    loreId: 'africa'
   },
   oceania: {
     id: 'oceania',
@@ -84,5 +89,6 @@ export const CONTINENTS: Record<string, Continent> = {
       x2: 87,
       y2: 90,
     },
-  },
+    loreId: 'oceania'
+  }
 };
