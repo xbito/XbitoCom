@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, Zap, Plus, ChevronUp, Plane, Users, MapPin, HardHat, Construction, BrickWall, LandPlot } from 'lucide-react';
-import type { Base, Facility, Continent } from '../types';
+import type { Base, Facility, Continent, ContinentSelection } from '../types';
 import { FACILITY_TYPES } from '../data/facilities';
 import { calculateBasePersonnelCapacity, calculateUsedPersonnelCapacity } from '../data/basePersonnel';
 import { createFacility } from '../data/facilities';
@@ -13,7 +13,7 @@ interface BaseModalProps {
   onOpenHangar?: (base: Base) => void;
   existingBase?: Base | null;
   availableFunds?: number;
-  selectedContinent?: Continent | null;
+  selectedContinent?: Continent | ContinentSelection | null;
   isOpen?: boolean;
   width?: string;
   title?: string;
@@ -73,9 +73,16 @@ const BaseModal: React.FC<BaseModalProps> = ({
 
   const baseCost = 2000000; // $2M for a new base
   
+  // Helper functions to safely access continent properties
+  const getContinent = (selected: Continent | ContinentSelection | null | undefined): Continent => {
+    if (!selected) return {} as Continent;
+    return 'continent' in selected ? selected.continent : selected;
+  };
+
   // Calculate continent personnel bonus
   const getPersonnelMultiplier = () => {
-    return selectedContinent?.personnelMultiplier || 1;
+    const continent = getContinent(selectedContinent);
+    return continent?.personnelMultiplier || 1;
   };
 
   // For new bases, calculate initial housing capacity from barracks
@@ -94,31 +101,55 @@ const BaseModal: React.FC<BaseModalProps> = ({
     if (!name || !selectedContinent || !onCreate) return;
     
     try {
+      // Randomize position within a small radius if click coordinates are provided
+      let x: number, y: number;
+      
+      if ('clickX' in selectedContinent && 'clickY' in selectedContinent) {
+        // Add random offset between 10 and 35 pixels
+        const minRadius = 10;
+        const maxRadius = 35;
+        const randomRadius = minRadius + Math.random() * (maxRadius - minRadius);
+        const randomAngle = Math.random() * Math.PI * 2;
+
+        // Calculate base position with primary offset
+        x = selectedContinent.clickX + Math.cos(randomAngle) * randomRadius;
+        y = selectedContinent.clickY + Math.sin(randomAngle) * randomRadius;
+
+        // Add a small secondary random offset (-5 to +5 pixels) for more natural placement
+        const secondaryOffset = 5;
+        x += (Math.random() * secondaryOffset * 2) - secondaryOffset;
+        y += (Math.random() * secondaryOffset * 2) - secondaryOffset;
+      } else {
+        // Fallback to random position within continent if no click coordinates
+        x = Math.random() * 100;
+        y = Math.random() * 100;
+      }
+
+      const continent = getContinent(selectedContinent);
       const newBase: Base = {
         id: existingBase?.id || crypto.randomUUID(),
         name,
-        x: Math.random() * 100, // Random position within the continent
-        y: Math.random() * 100, // Random position within the continent
+        x,
+        y,
         level: 1,
-        personnel: [], // Personnel will be assigned later by the user from Personnel modal
+        personnel: [],
         power: 0,
         powerUsage: 0,
-        continent: selectedContinent,
-        maxSize: selectedContinent.maxBaseSize,
+        continent,
+        maxSize: continent.maxBaseSize,
         facilities: [
           createFacility('powerPlant'),
           createFacility('barracks')
         ],
         vehicles: [],
-        radarRange: 0, // No radar range since there's no radar
-        radarEffectiveness: 0, // No radar effectiveness since there's no radar
+        radarRange: 0,
+        radarEffectiveness: 0,
         personnelCapacity: getInitialPersonnelCapacity(),
       };
 
       onCreate(newBase);
     } catch (error) {
-      console.error('Failed to create base:', error);
-      alert('An error occurred while creating the base');
+      console.error('Error creating base:', error);
     }
   };
 
@@ -376,7 +407,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
                     <div>
                       <div className="text-sm text-slate-400 mb-1">Initial Land Usage</div>
                       <div className="text-xl font-bold text-white">
-                        2 / {selectedContinent?.maxBaseSize ?? 0} spaces
+                        2 / {getContinent(selectedContinent)?.maxBaseSize ?? 0} spaces
                       </div>
                       <div className="text-xs text-slate-400 mt-1">
                         Power Plant (1) + Barracks (1)
@@ -396,24 +427,24 @@ const BaseModal: React.FC<BaseModalProps> = ({
                   <div className="bg-gradient-to-r from-slate-800 to-slate-900 p-4 rounded-lg border border-slate-700">
                     <h3 className="font-medium mb-3 flex items-center gap-2">
                       <LandPlot size={16} className="text-green-400" />
-                      Regional Advantages: {selectedContinent.name}
+                      Regional Advantages: {getContinent(selectedContinent).name}
                     </h3>
                     <div className="space-y-2 text-sm">
                       <div className="flex justify-between items-center">
                         <span>Maximum Land Usage</span>
-                        <span className="text-green-400">{selectedContinent.maxBaseSize} facility spaces</span>
+                        <span className="text-green-400">{getContinent(selectedContinent).maxBaseSize} facility spaces</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span>Personnel Efficiency</span>
-                        <span className="text-green-400">+{((selectedContinent.personnelMultiplier - 1) * 100).toFixed(0)}%</span>
+                        <span className="text-green-400">+{((getContinent(selectedContinent).personnelMultiplier - 1) * 100).toFixed(0)}%</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span>Research Efficiency</span>
-                        <span className="text-purple-400">+{((selectedContinent.researchMultiplier - 1) * 100).toFixed(0)}%</span>
+                        <span className="text-purple-400">+{((getContinent(selectedContinent).researchMultiplier - 1) * 100).toFixed(0)}%</span>
                       </div>
                       <div className="flex justify-between items-center">
                         <span>Defense Strength</span>
-                        <span className="text-yellow-400">+{((selectedContinent.defenseMultiplier - 1) * 100).toFixed(0)}%</span>
+                        <span className="text-yellow-400">+{((getContinent(selectedContinent).defenseMultiplier - 1) * 100).toFixed(0)}%</span>
                       </div>
                     </div>
                   </div>

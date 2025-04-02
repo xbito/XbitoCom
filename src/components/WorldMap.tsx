@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Base, Continent, UFO, Point2D } from '../types';
+import { Base, Continent, UFO, Point2D, ContinentSelection } from '../types';
 import { CONTINENTS } from '../data/continents';
 import { AlertCircle } from 'lucide-react';
 
@@ -9,7 +9,7 @@ const UFO_SPEED = 50;
 interface WorldMapProps {
   bases: Base[];
   onBaseClick: (base: Base) => void;
-  onContinentSelect?: (continent: Continent) => void;
+  onContinentSelect?: (selection: ContinentSelection) => void;
   showRadarCoverage?: boolean;
   showAllUFOTrajectories?: boolean;
   activeUFOs?: UFO[];
@@ -113,6 +113,12 @@ const WorldMap: React.FC<WorldMapProps> = ({
   const handleMapClick = (e: React.MouseEvent<SVGElement>) => {
     if (!onContinentSelect) return;
 
+    // Get click coordinates relative to SVG viewBox
+    const svgElement = e.currentTarget;
+    const rect = svgElement.getBoundingClientRect();
+    const clickX = ((e.clientX - rect.left) / rect.width) * 900; // Scale to SVG width
+    const clickY = ((e.clientY - rect.top) / rect.height) * 500;  // Scale to SVG height
+
     const clickedContinent = Object.values(CONTINENTS).find(continent => {
       const path = document.getElementById(`continent-${continent.id}`);
       if (!path) return false;
@@ -120,20 +126,26 @@ const WorldMap: React.FC<WorldMapProps> = ({
     });
 
     if (clickedContinent) {
-      onContinentSelect(clickedContinent);
+      onContinentSelect({
+        continent: clickedContinent,
+        clickX,
+        clickY
+      });
     }
   };
 
   const getBasePosition = (base: Base) => {
     const continent = base?.continent;
     if (!continent || !continent.coordinates) {
-      // Return default position if continent or coordinates are missing
-      return {
-        x: 0,
-        y: 0
-      };
+      return { x: 0, y: 0 };
     }
 
+    // If base has specific SVG coordinates, use them directly
+    if (base.x >= 0 && base.x <= 1000 && base.y >= 0 && base.y <= 500) {
+      return { x: base.x, y: base.y };
+    }
+
+    // Otherwise convert from percentage coordinates
     const x = continent.coordinates.x1 + 
       ((continent.coordinates.x2 - continent.coordinates.x1) * (base.x / 100));
     const y = continent.coordinates.y1 + 

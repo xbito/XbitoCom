@@ -308,3 +308,9 @@ export interface UFOCrewRequirements {
   // Total crew capacity
   totalCapacity?: number;
 }
+
+export interface ContinentSelection {
+  continent: Continent;
+  clickX: number; // SVG coordinate X where user clicked
+  clickY: number; // SVG coordinate Y where user clicked
+}
