@@ -1,9 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { X, Zap, Plus, ChevronUp, Plane, Users, MapPin, HardHat, Construction, BrickWall, LandPlot } from 'lucide-react';
 import type { Base, Facility, Continent, ContinentSelection } from '../types';
-import { FACILITY_TYPES } from '../data/facilities';
+import { FACILITY_TYPES, createFacility, upgradeFacility } from '../data/facilities';
 import { calculateBasePersonnelCapacity, calculateUsedPersonnelCapacity } from '../data/basePersonnel';
-import { createFacility } from '../data/facilities';
 
 interface BaseModalProps {
   onClose: () => void;
@@ -37,6 +36,25 @@ const BaseModal: React.FC<BaseModalProps> = ({
   // If component is not open, don't render anything
   if (!isOpen) return null;
 
+  const calculatePowerStatus = (base: Base) => {
+    if (!base || !base.facilities) {
+      throw new Error('Invalid base provided');
+    }
+    const totalGeneration = base.facilities
+      .filter(f => f.powerUsage < 0)
+      .reduce((acc, f) => acc + Math.abs(f.powerUsage), 0);
+    
+    const totalUsage = base.facilities
+      .filter(f => f.powerUsage > 0)
+      .reduce((acc, f) => acc + f.powerUsage, 0);
+
+    return {
+      generation: totalGeneration,
+      usage: totalUsage,
+      surplus: totalGeneration - totalUsage,
+    };
+  };
+
   // If this is being used as a generic modal with children
   if (children) {
     return (
@@ -69,7 +87,68 @@ const BaseModal: React.FC<BaseModalProps> = ({
   // Base creation/management UI code
   const [name, setName] = useState(existingBase?.name || '');
   const [showFacilitySelect, setShowFacilitySelect] = useState(false);
-  const [facilities, setFacilities] = useState(existingBase?.facilities || []);
+  const [localFacilities, setLocalFacilities] = useState<Facility[]>(existingBase?.facilities || []);
+  const [powerStatus, setPowerStatus] = useState(() => 
+    existingBase ? calculatePowerStatus(existingBase) : { generation: 0, usage: 0, surplus: 0 }
+  );
+
+  // Keep state in sync with existingBase prop
+  useEffect(() => {
+    if (existingBase) {
+      setName(existingBase.name);
+      setLocalFacilities(existingBase.facilities);
+      setPowerStatus(calculatePowerStatus(existingBase));
+    }
+  }, [existingBase]);
+
+  // Update power status whenever facilities change
+  useEffect(() => {
+    if (existingBase) {
+      setPowerStatus(calculatePowerStatus({
+        ...existingBase,
+        facilities: localFacilities
+      }));
+    }
+  }, [localFacilities, existingBase]);
+
+  // Keep localFacilities in sync when upgrades happen
+  const handleFacilityUpgrade = (baseId: string, facilityId: string) => {
+    if (!onUpgrade) return;
+
+    try {
+      onUpgrade(baseId, facilityId);
+
+      // Update local state immediately to reflect the upgrade
+      setLocalFacilities(prev => {
+        const facilityToUpgrade = prev.find(f => f.id === facilityId);
+        if (!facilityToUpgrade) {
+          console.error('[Facility Upgrade] Could not find facility to upgrade:', {
+            facilityId,
+            baseId,
+            allFacilityIds: prev.map(f => f.id)
+          });
+          return prev;
+        }
+        
+        const result = upgradeFacility(facilityToUpgrade);
+        if (!result.success) {
+          console.error('[Facility Upgrade] Failed to upgrade facility:', {
+            facility: facilityToUpgrade,
+            error: result.message
+          });
+          return prev;
+        }
+        
+        return prev.map(f => f.id === facilityId ? result.facility : f);
+      });
+    } catch (error) {
+      console.error('[Facility Upgrade] Unexpected error during upgrade:', error, {
+        baseId,
+        facilityId,
+        existingBase
+      });
+    }
+  };
 
   const baseCost = 2000000; // $2M for a new base
   
@@ -189,8 +268,8 @@ const BaseModal: React.FC<BaseModalProps> = ({
       
       // Create the new facility
       const newFacility = createFacility(facilityType);
-      const updatedFacilities = [...facilities, newFacility];
-      setFacilities(updatedFacilities);
+      const updatedFacilities = [...localFacilities, newFacility];
+      setLocalFacilities(updatedFacilities);
 
       // Update the base's state to reflect new facility immediately
       const updatedBase: Base = {
@@ -211,25 +290,6 @@ const BaseModal: React.FC<BaseModalProps> = ({
       console.error('Failed to add facility:', error);
       alert('An error occurred while adding the facility');
     }
-  };
-
-  const calculatePowerStatus = (base: Base) => {
-    if (!base || !base.facilities) {
-      throw new Error('Invalid base provided');
-    }
-    const totalGeneration = base.facilities
-      .filter(f => f.powerUsage < 0)
-      .reduce((acc, f) => acc + Math.abs(f.powerUsage), 0);
-    
-    const totalUsage = base.facilities
-      .filter(f => f.powerUsage > 0)
-      .reduce((acc, f) => acc + f.powerUsage, 0);
-
-    return {
-      generation: totalGeneration,
-      usage: totalUsage,
-      surplus: totalGeneration - totalUsage,
-    };
   };
 
   const calculateBaseSize = (base: Base) => {
@@ -271,28 +331,22 @@ const BaseModal: React.FC<BaseModalProps> = ({
                 <Zap className="text-yellow-400" size={20} />
                 <h3 className="font-semibold">Power Status</h3>
               </div>
-              {(() => {
-                const status = calculatePowerStatus(existingBase);
-                
-                return (
-                  <div className="grid grid-cols-3 gap-4 text-center">
-                    <div>
-                      <p className="text-sm text-slate-400">Generation</p>
-                      <p className="text-lg font-bold text-green-400">{status.generation}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-400">Usage</p>
-                      <p className="text-lg font-bold text-red-400">{status.usage}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-slate-400">Surplus</p>
-                      <p className={`text-lg font-bold ${status.surplus >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                        {status.surplus}
-                      </p>
-                    </div>
-                  </div>
-                );
-              })()}
+              <div className="grid grid-cols-3 gap-4 text-center">
+                <div>
+                  <p className="text-sm text-slate-400">Generation</p>
+                  <p className="text-lg font-bold text-green-400">{powerStatus.generation}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-400">Usage</p>
+                  <p className="text-lg font-bold text-red-400">{powerStatus.usage}</p>
+                </div>
+                <div>
+                  <p className="text-sm text-slate-400">Surplus</p>
+                  <p className={`text-lg font-bold ${powerStatus.surplus >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                    {powerStatus.surplus}
+                  </p>
+                </div>
+              </div>
             </div>
 
             <div className="mb-4 bg-gradient-to-r from-slate-800 to-slate-900 p-4 rounded-lg border border-slate-700">
@@ -494,7 +548,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
                 )}
 
                 <div className="space-y-3">
-                  {facilities.map((facility) => {
+                  {localFacilities.map((facility) => {
                     const facilityType = FACILITY_TYPES[facility.type];
                     const upgradeCost = calculateUpgradeCost(facility);
                     return (
@@ -537,7 +591,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
                           )}
                           <button
                             type="button"
-                            onClick={() => onUpgrade?.(existingBase?.id ?? '', facility.id)}
+                            onClick={() => handleFacilityUpgrade(existingBase?.id ?? '', facility.id)}
                             disabled={(availableFunds ?? 0) < (upgradeCost ?? 0)}
                             className="bg-green-600 hover:bg-green-700 disabled:bg-slate-800 disabled:text-slate-600 disabled:cursor-not-allowed text-white px-3 py-2 rounded flex items-center gap-2 transition-colors"
                           >

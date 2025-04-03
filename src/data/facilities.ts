@@ -76,105 +76,176 @@ export const FACILITY_TYPES: Record<string, FacilityType> = {
 };
 
 export function createFacility(type: FacilityType['type'], level: number = 1): Facility {
-  const facilityType = FACILITY_TYPES[type];
-  if (!facilityType) {
-    throw new Error(`Unknown facility type: ${type}`);
-  }
-
-  const facility: Facility = {
-    id: crypto.randomUUID(),
-    type: type as 'barracks' | 'hangar' | 'radar' | 'defense' | 'research' | 'powerPlant',
-    level,
-    personnel: [],
-    powerUsage: facilityType.basePowerUsage * level,
-    maintenance: facilityType.baseMaintenance * Math.pow(facilityType.upgradeMultiplier, level - 1),
-  };
-
-  // Add hangar-specific properties
-  if (type === 'hangar') {
-    facility.vehicles = [];
-    facility.vehicleCapacity = Math.floor(facilityType.vehicleCapacity! * Math.pow(facilityType.vehicleCapacityMultiplier!, level - 1));
-  }
-
-  // Add barracks-specific properties
-  if (type === 'barracks') {
-    // First level barracks gives 15 personnel capacity
-    // Each subsequent level adds 10 personnel capacity
-    if (level === 1) {
-      facility.personnelCapacity = facilityType.personnelCapacity;
-    } else {
-      // Base capacity of 15 + 10 per additional level
-      facility.personnelCapacity = 15 + ((level - 1) * 10);
+  try {
+    const facilityType = FACILITY_TYPES[type];
+    if (!facilityType) {
+      throw new Error(`Unknown facility type: ${type}`);
     }
-    facility.commanderAssigned = false;
-  }
 
-  // Add personnel capacity to other facilities based on their level
-  if (['research', 'powerPlant', 'radar', 'defense'].includes(type)) {
-    facility.personnelCapacity = facilityType.basePersonnel * level;
-  }
+    if (level < 1) {
+      throw new Error(`Invalid level: ${level}. Level must be at least 1`);
+    }
 
-  return facility;
+    // For radar facilities, enforce max level of 5
+    if (type === 'radar' && level > 5) {
+      throw new Error('Radar facility cannot be created above level 5');
+    }
+
+    const facility: Facility = {
+      id: crypto.randomUUID(),
+      type: type as 'barracks' | 'hangar' | 'radar' | 'defense' | 'research' | 'powerPlant',
+      level,
+      personnel: [],
+      powerUsage: facilityType.basePowerUsage * level,
+      maintenance: facilityType.baseMaintenance * Math.pow(facilityType.upgradeMultiplier, level - 1),
+    };
+
+    // Add hangar-specific properties
+    if (type === 'hangar') {
+      facility.vehicles = [];
+      facility.vehicleCapacity = Math.floor(facilityType.vehicleCapacity! * Math.pow(facilityType.vehicleCapacityMultiplier!, level - 1));
+    }
+
+    // Add barracks-specific properties
+    if (type === 'barracks') {
+      // First level barracks gives 15 personnel capacity
+      // Each subsequent level adds 10 personnel capacity
+      if (level === 1) {
+        facility.personnelCapacity = facilityType.personnelCapacity;
+      } else {
+        // Base capacity of 15 + 10 per additional level
+        facility.personnelCapacity = 15 + ((level - 1) * 10);
+      }
+      facility.commanderAssigned = false;
+    }
+
+    // Add personnel capacity to other facilities based on their level
+    if (['research', 'powerPlant', 'radar', 'defense'].includes(type)) {
+      facility.personnelCapacity = facilityType.basePersonnel * level;
+    }
+
+    return facility;
+  } catch (error) {
+    console.error('[Create Facility] Failed:', error, {
+      facilityType: type,
+      level,
+      availableTypes: Object.keys(FACILITY_TYPES)
+    });
+    throw error;
+  }
 }
 
 /**
- * Upgrade barracks facility
- * @param barracks The barracks facility to upgrade
+ * Generic facility upgrade function
+ * @param facility The facility to upgrade
  * @param cost Optional cost of the upgrade (will be calculated if not provided)
- * @returns Object containing the upgraded barracks facility, success status, message, and cost
+ * @returns Object containing the upgraded facility, success status, message, and cost
  */
-export function upgradeBarracks(
-  barracks: Facility,
+export function upgradeFacility(
+  facility: Facility,
   cost?: number
 ): {
   success: boolean;
   message: string;
-  barracks: Facility;
+  facility: Facility;
   cost: number;
+  baseProperties?: {
+    radarRange?: number;
+    radarEffectiveness?: number;
+  };
 } {
-  if (barracks.type !== 'barracks') {
-    return { 
-      success: false, 
-      message: 'Facility is not a barracks', 
-      barracks, 
-      cost: 0 
+  try {
+    const facilityType = FACILITY_TYPES[facility.type];
+    if (!facilityType) {
+      return { 
+        success: false, 
+        message: `Invalid facility type: ${facility.type}`, 
+        facility, 
+        cost: 0 
+      };
+    }
+
+    const newLevel = facility.level + 1;
+
+    // Check max level for radar facilities
+    if (facility.type === 'radar' && newLevel > 5) {
+      return {
+        success: false,
+        message: 'Radar facility cannot be upgraded beyond level 5',
+        facility,
+        cost: 0
+      };
+    }
+    
+    // Calculate upgrade cost if not provided
+    if (cost === undefined) {
+      const baseCost = facilityType.baseCost;
+      const levelMultiplier = Math.pow(facilityType.upgradeMultiplier, newLevel - 1);
+      cost = Math.floor(baseCost * levelMultiplier);
+    }
+
+    // Create upgraded facility starting with base properties
+    const upgradedFacility = {
+      ...facility,
+      level: newLevel,
+      // For power plants, scale power generation linearly with level
+      // For other facilities, use a power multiplier
+      powerUsage: facility.type === 'powerPlant'
+        ? facilityType.basePowerUsage * newLevel
+        : Math.floor(facilityType.basePowerUsage * Math.pow(1.2, newLevel - 1)),
+      maintenance: Math.floor(facilityType.baseMaintenance * Math.pow(facilityType.upgradeMultiplier, newLevel - 1)),
+      personnel: facility.personnel || []
+    };
+
+    // Handle special facility type upgrades
+    switch (facility.type) {
+      case 'barracks':
+        upgradedFacility.personnelCapacity = newLevel === 1 ? 15 : 15 + ((newLevel - 1) * 10);
+        upgradedFacility.commanderAssigned = facility.commanderAssigned || false;
+        break;
+      case 'hangar':
+        upgradedFacility.vehicleCapacity = Math.floor(
+          facilityType.vehicleCapacity! * Math.pow(facilityType.vehicleCapacityMultiplier!, newLevel - 1)
+        );
+        upgradedFacility.vehicles = facility.vehicles || [];
+        break;
+      case 'radar':
+        // Return radar properties to be set at base level instead of facility level
+        return {
+          success: true,
+          message: `Upgraded ${facilityType.name} to level ${newLevel}, detection range +${Math.floor((Math.pow(1.1, newLevel - 1) - 1) * 100)}%`,
+          facility: upgradedFacility,
+          cost,
+          baseProperties: {
+            radarRange: facilityType.baseRadarRange! * Math.pow(1.1, newLevel - 1),
+            radarEffectiveness: facilityType.baseEffectiveness! * Math.pow(1.05, newLevel - 1)
+          }
+        };
+      default:
+        // For research, defense, and power plant, just update personnel capacity
+        upgradedFacility.personnelCapacity = facilityType.basePersonnel * newLevel;
+        break;
+    }
+
+    const upgradeEffect = facility.type === 'powerPlant'
+      ? `power generation: ${Math.abs(upgradedFacility.powerUsage)}`
+      : facility.type === 'barracks'
+      ? `housing capacity: ${upgradedFacility.personnelCapacity} personnel`
+      : `efficiency: +${Math.floor((Math.pow(1.2, newLevel - 1) - 1) * 100)}%`;
+
+    return {
+      success: true,
+      message: `Upgraded ${facilityType.name} to level ${newLevel}, new ${upgradeEffect}`,
+      facility: upgradedFacility,
+      cost,
+    };
+  } catch (error) {
+    console.error('[Facility Upgrade] Failed:', error, { facility });
+    return {
+      success: false,
+      message: 'Failed to upgrade facility',
+      facility,
+      cost: 0
     };
   }
-  
-  const newLevel = barracks.level + 1;
-  
-  // Calculate upgrade cost if not provided
-  if (cost === undefined) {
-    const facilityType = FACILITY_TYPES[barracks.type];
-    const baseCost = facilityType.baseCost;
-    const levelMultiplier = Math.pow(facilityType.upgradeMultiplier, newLevel - 1);
-    cost = Math.floor(baseCost * levelMultiplier);
-  }
-  
-  // Calculate new personnel capacity (for the base)
-  // First level gives 15 capacity, additional levels give 10 each
-  const newPersonnelCapacity = newLevel === 1 ? 15 : 15 + ((newLevel - 1) * 10);
-  
-  // Calculate upgrade effects
-  const powerMultiplier = Math.pow(1.2, newLevel - 1);
-  const facilityType = FACILITY_TYPES.barracks;
-  
-  // Create upgraded barracks
-  const upgradedBarracks = {
-    ...barracks,
-    level: newLevel,
-    personnelCapacity: newPersonnelCapacity,
-    powerUsage: Math.floor(facilityType.basePowerUsage * powerMultiplier),
-    maintenance: Math.floor(facilityType.baseMaintenance * Math.pow(facilityType.upgradeMultiplier, newLevel - 1)),
-    // Preserve existing personnel and commander status
-    personnel: barracks.personnel || [],
-    commanderAssigned: barracks.commanderAssigned || false
-  };
-  
-  return {
-    success: true,
-    message: `Upgraded barracks to level ${newLevel}, new housing capacity: ${newPersonnelCapacity} personnel`,
-    barracks: upgradedBarracks,
-    cost,
-  };
 }

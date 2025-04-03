@@ -12,11 +12,11 @@ import EventModal from './components/EventModal';
 import YearlyReviewModal from './components/YearlyReviewModal';
 import HangarModal from './components/HangarModal';
 import ConfirmationDialog from './components/ConfirmationDialog';
-import { GameState, Base, Continent, Personnel, ResearchProject, Transaction, UFO } from './types';
-import { FACILITY_TYPES, upgradeBarracks } from './data/facilities';
+import { GameState, Base, Personnel, ResearchProject, Transaction, UFO, ContinentSelection } from './types';
+import { FACILITY_TYPES, upgradeFacility } from './data/facilities';
 import { BASE_SALARIES } from './data/personnel';
 import { MONTHLY_EVENTS, GameEvent, evaluateYearlyPerformance, YearlyReview } from './data/events';
-import { hasCapacityForNewFacility, canAssignPersonnelToFacility, calculateFacilityPersonnelCapacity } from './data/basePersonnel';
+import { hasCapacityForNewFacility, canAssignPersonnelToFacility } from './data/basePersonnel';
 import { doesTrajectoryIntersectRadar } from './utils/trajectory';
 import { shouldSpawnUFO, generateUFO } from './data/ufos';
 import DebugPanel from './components/DebugPanel';
@@ -62,7 +62,7 @@ function App() {
   type ModalType = 'intro' | 'base' | 'personnel' | 'research' | 'financial' | 'event' | 'yearlyReview' | 'hangar' | null;
   const [activeModal, setActiveModal] = useState<ModalType>('intro');
   const [selectedBase, setSelectedBase] = useState<Base | null>(null);
-  const [selectedContinent, setSelectedContinent] = useState<Continent | null>(null);
+  const [selectedContinent, setSelectedContinent] = useState<ContinentSelection | null>(null);
   const [currentEvent, setCurrentEvent] = useState<{ event: GameEvent; message: string } | null>(null);
   const [yearlyReview, setYearlyReview] = useState<YearlyReview | null>(null);
   const [selectedHangarBase, setSelectedHangarBase] = useState<Base | null>(null);
@@ -194,88 +194,54 @@ function App() {
   const handleUpgradeFacility = useCallback((baseId: string, facilityId: string) => {
     setGameState(prev => {
       const base = prev.bases.find(b => b.id === baseId);
-      const facility = base?.facilities.find(f => f.id === facilityId);
-      if (!base || !facility) return prev;
+      if (!base) return prev;
 
+      // Find and upgrade the facility
+      const facility = base.facilities.find(f => f.id === facilityId);
+      if (!facility) return prev;
+
+      // Calculate cost before upgrade
       const facilityType = FACILITY_TYPES[facility.type];
-      let upgradeCost = Math.floor(
-        facilityType.baseCost * Math.pow(facilityType.upgradeMultiplier, facility.level)
-      );
-      
-      // Different handling based on facility type
-      let updatedFacility;
-      
-      // For barracks, use the specialized upgrade function
-      if (facility.type === 'barracks') {
-        const result = upgradeBarracks(facility, upgradeCost);
-        
-        if (!result.success) {
-          alert(result.message);
-          return prev;
-        }
-        
-        updatedFacility = result.barracks;
-        upgradeCost = result.cost;
-      } else {
-        // Regular facility upgrade logic
-        const newLevel = facility.level + 1;
-        
-        // Check max level for radar facilities
-        if (facility.type === 'radar' && newLevel > 5) {
-          alert('Radar facility cannot be upgraded beyond level 5');
-          return prev;
-        }
+      const upgradeCost = Math.floor(facilityType.baseCost * Math.pow(facilityType.upgradeMultiplier, facility.level));
 
-        const powerMultiplier = Math.pow(1.2, newLevel - 1);
-        
-        updatedFacility = {
-          ...facility,
-          level: newLevel,
-          powerUsage: Math.floor(facilityType.basePowerUsage * powerMultiplier),
-          maintenance: Math.floor(facilityType.baseMaintenance * Math.pow(facilityType.upgradeMultiplier, newLevel - 1)),
-        };
-        
-        // Update personnel capacity for non-barracks facilities
-        if (['research', 'powerPlant', 'radar', 'defense', 'hangar'].includes(facility.type)) {
-          updatedFacility.personnelCapacity = calculateFacilityPersonnelCapacity(updatedFacility);
-        }
+      const result = upgradeFacility(facility, upgradeCost);
+      if (!result.success) {
+        alert(result.message);
+        return prev;
       }
 
+      // Update the base's facilities
       const newBases = prev.bases.map(b => {
-        if (b.id !== baseId) return b;
+        if (b.id === baseId) {
+          const updatedBase = {
+            ...b,
+            facilities: b.facilities.map(f => f.id === facilityId ? result.facility : f)
+          };
 
-        const newFacilities = b.facilities.map(f => {
-          if (f.id !== facilityId) return f;
-          return updatedFacility;
-        });
+          // For radar facilities, update base radar properties
+          if (result.baseProperties) {
+            updatedBase.radarRange = result.baseProperties.radarRange ?? updatedBase.radarRange;
+            updatedBase.radarEffectiveness = result.baseProperties.radarEffectiveness ?? updatedBase.radarEffectiveness;
+          }
 
-        const updatedBase = {
-          ...b,
-          facilities: newFacilities,
-        };
-
-        // Update radar properties if upgrading a radar facility
-        if (facility.type === 'radar') {
-          const radarBonus = updatedFacility.level * 0.2; // 20% per level
-          const radarType = FACILITY_TYPES.radar;
-          updatedBase.radarRange = (radarType.baseRadarRange ?? 1000) * (1 + radarBonus);
-          updatedBase.radarEffectiveness = (radarType.baseEffectiveness ?? 1.0) * (1 + radarBonus);
+          return updatedBase;
         }
-
-        return updatedBase;
+        return b;
       });
 
+      // Add transaction
       addTransaction(
-        upgradeCost,
+        result.cost,
         'expense',
-        `Upgrade ${facilityType.name} to level ${updatedFacility.level} at ${base.name}`,
+        result.message,
         'facilities'
       );
 
+      // Return updated state
       return {
         ...prev,
         bases: newBases,
-        funds: prev.funds - upgradeCost,
+        funds: prev.funds - result.cost,
       };
     });
   }, [addTransaction]);
@@ -511,8 +477,8 @@ function App() {
     setActiveModal(null);
   }, [addTransaction]);
 
-  const handleContinentSelect = useCallback((continent: Continent) => {
-    setSelectedContinent(continent);
+  const handleContinentSelect = useCallback((selection: ContinentSelection) => {
+    setSelectedContinent(selection);
     setActiveModal('base');
   }, []);
 
