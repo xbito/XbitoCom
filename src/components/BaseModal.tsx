@@ -105,11 +105,10 @@ const BaseModal: React.FC<BaseModalProps> = ({
     if (existingBase) {
       try {
         const existingTypes = new Set(localFacilities.map(f => f.type));
-        const currentSize = localFacilities.reduce((acc, f) => acc + FACILITY_TYPES[f.type].size, 0);
         
+        // Only filter out facilities that are already built, don't filter by size or funds
         const available = Object.values(FACILITY_TYPES).filter(f => 
-          !existingTypes.has(f.type as Facility['type']) && 
-          currentSize + f.size <= existingBase.maxSize
+          !existingTypes.has(f.type as Facility['type'])
         );
         
         setAvailableFacilities(available);
@@ -488,24 +487,61 @@ const BaseModal: React.FC<BaseModalProps> = ({
                   <div className="mb-4 bg-gradient-to-r from-slate-800 to-slate-900 p-4 rounded-lg border border-slate-700">
                     <h4 className="font-medium mb-2">Select Facility to Add</h4>
                     <div className="space-y-2">
-                      {availableFacilities.map(facility => (
-                        <button
-                          key={facility.type}
-                          type="button"
-                          onClick={() => handleAddNewFacility(facility.type)}
-                          disabled={availableFunds < facility.baseCost}
-                          className="w-full text-left p-3 rounded hover:bg-slate-800 flex justify-between items-center border border-slate-700 bg-slate-900"
-                        >
-                          <div>
-                            <p className="font-medium">{facility.name}</p>
-                            <p className="text-sm text-slate-400">{facility.description}</p>
+                      {availableFacilities.map(facility => {
+                        // Calculate current base size based on the latest localFacilities state
+                        const currentBaseSize = localFacilities.reduce(
+                          (acc, f) => acc + FACILITY_TYPES[f.type].size, 
+                          0
+                        );
+                        
+                        const canAfford = (availableFunds ?? 0) >= facility.baseCost;
+                        const hasEnoughSpace = existingBase && 
+                          currentBaseSize + facility.size <= existingBase.maxSize;
+                        const canBuild = canAfford && hasEnoughSpace;
+                        
+                        // Create tooltip text based on what's preventing construction
+                        let tooltipText = "";
+                        if (!canAfford) {
+                          tooltipText = `Not enough funds: $${availableFunds.toLocaleString()} / $${facility.baseCost.toLocaleString()} required`;
+                        } else if (!hasEnoughSpace) {
+                          tooltipText = `Not enough space: ${currentBaseSize + facility.size} / ${existingBase.maxSize} max facility spaces`;
+                        }
+                        
+                        return (
+                          <div key={facility.type} className="relative group">
+                            <button
+                              type="button"
+                              onClick={() => canBuild && handleAddNewFacility(facility.type)}
+                              disabled={!canBuild}
+                              className={`w-full text-left p-3 rounded flex justify-between items-center border ${
+                                canBuild 
+                                  ? "border-slate-700 bg-slate-900 hover:bg-slate-800" 
+                                  : "border-slate-800 bg-slate-900/80 cursor-not-allowed opacity-70"
+                              }`}
+                            >
+                              <div>
+                                <p className={`font-medium ${!canBuild ? "text-slate-400" : ""}`}>{facility.name}</p>
+                                <p className="text-sm text-slate-400">{facility.description}</p>
+                              </div>
+                              <div className="text-right">
+                                <p className={canAfford ? "text-green-400" : "text-red-400"}>
+                                  ${facility.baseCost.toLocaleString()}
+                                </p>
+                                <p className={`text-sm ${hasEnoughSpace ? "text-slate-400" : "text-red-400"}`}>
+                                  Size: {facility.size}
+                                </p>
+                              </div>
+                            </button>
+                            
+                            {/* Tooltip that shows on hover when building is not possible */}
+                            {!canBuild && (
+                              <div className="absolute opacity-0 group-hover:opacity-100 transition-opacity z-10 bg-slate-950 text-white text-xs p-2 rounded shadow-lg left-1/2 -translate-x-1/2 -bottom-1 transform translate-y-full w-max max-w-xs pointer-events-none border border-slate-700">
+                                {tooltipText}
+                              </div>
+                            )}
                           </div>
-                          <div className="text-right">
-                            <p className="text-green-400">${facility.baseCost.toLocaleString()}</p>
-                            <p className="text-sm text-slate-400">Size: {facility.size}</p>
-                          </div>
-                        </button>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 )}
