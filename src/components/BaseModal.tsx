@@ -79,6 +79,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
   const [powerStatus, setPowerStatus] = useState(() => 
     existingBase ? calculatePowerStatus(existingBase) : { generation: 0, usage: 0, surplus: 0 }
   );
+  const [availableFacilities, setAvailableFacilities] = useState<typeof FACILITY_TYPES[keyof typeof FACILITY_TYPES][]>([]);
 
   // Keep state in sync with existingBase prop
   useEffect(() => {
@@ -98,6 +99,34 @@ const BaseModal: React.FC<BaseModalProps> = ({
       }));
     }
   }, [localFacilities, existingBase]);
+
+  // Update available facilities whenever localFacilities changes
+  useEffect(() => {
+    if (existingBase) {
+      try {
+        const existingTypes = new Set(localFacilities.map(f => f.type));
+        const currentSize = localFacilities.reduce((acc, f) => acc + FACILITY_TYPES[f.type].size, 0);
+        
+        const available = Object.values(FACILITY_TYPES).filter(f => 
+          !existingTypes.has(f.type as Facility['type']) && 
+          currentSize + f.size <= existingBase.maxSize
+        );
+        
+        setAvailableFacilities(available);
+        
+        // Auto-close the facility select if there are no available facilities
+        if (available.length === 0 && showFacilitySelect) {
+          setShowFacilitySelect(false);
+        }
+      } catch (error) {
+        console.error('[BaseModal] Error updating available facilities:', error, {
+          localFacilities,
+          existingBase
+        });
+        setAvailableFacilities([]);
+      }
+    }
+  }, [localFacilities, existingBase, showFacilitySelect]);
 
   // Keep localFacilities in sync when upgrades happen
   const handleFacilityUpgrade = (baseId: string, facilityId: string) => {
@@ -199,23 +228,6 @@ const BaseModal: React.FC<BaseModalProps> = ({
   };
 
   const canCreate = name && (!existingBase && availableFunds >= baseCost);
-
-  const getAvailableFacilities = () => {
-    if (!existingBase) return [];
-    
-    try {
-      const existingTypes = new Set(existingBase.facilities.map(f => f.type));
-      const currentSize = existingBase.facilities.reduce((acc, f) => acc + FACILITY_TYPES[f.type].size, 0);
-      
-      return Object.values(FACILITY_TYPES).filter(f => 
-        !existingTypes.has(f.type as Facility['type']) && 
-        currentSize + f.size <= existingBase.maxSize
-      );
-    } catch (error) {
-      console.error('Error getting available facilities:', error);
-      return [];
-    }
-  };
 
   const handleAddNewFacility = (facilityType: string) => {
     if (!existingBase || !onAddFacility) return;
@@ -464,7 +476,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
                   <button
                     type="button"
                     onClick={() => setShowFacilitySelect(true)}
-                    disabled={getAvailableFacilities().length === 0 || (availableFunds ?? 0) < Math.min(...getAvailableFacilities().map(f => f.baseCost))}
+                    disabled={availableFacilities.length === 0 || (availableFunds ?? 0) < Math.min(...availableFacilities.map(f => f.baseCost))}
                     className="text-sm bg-green-600 hover:bg-green-700 disabled:bg-slate-800 disabled:text-slate-600 disabled:cursor-not-allowed text-white px-3 py-2 rounded flex items-center gap-1 transition-colors"
                   >
                     <Plus size={16} />
@@ -476,7 +488,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
                   <div className="mb-4 bg-gradient-to-r from-slate-800 to-slate-900 p-4 rounded-lg border border-slate-700">
                     <h4 className="font-medium mb-2">Select Facility to Add</h4>
                     <div className="space-y-2">
-                      {getAvailableFacilities().map(facility => (
+                      {availableFacilities.map(facility => (
                         <button
                           key={facility.type}
                           type="button"
