@@ -88,6 +88,7 @@ export interface VehicleStats {
   armor: number;
   range: number;
   capacity: number;
+  firepower: number;
 }
 
 export type VehicleType =
@@ -275,7 +276,14 @@ export type ResearchCategory =
   | 'aircraft'
   | 'facilities'
   | 'xenobiology'
-  | 'psionics';
+  | 'psionics'
+  | 'operations'
+  | 'medical'
+  | 'detection'
+  | 'navigation'
+  | 'materials'
+  | 'power'
+  | 'logistics';
 
 export interface Transaction {
   id: string;
