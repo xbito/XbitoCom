@@ -3,6 +3,13 @@ import { X, Zap, Plus, ChevronUp, Plane, Users, MapPin, HardHat, Construction, B
 import type { Base, Facility, Continent, ContinentSelection } from '../types';
 import { FACILITY_TYPES, createFacility, upgradeFacility } from '../data/facilities';
 import { calculateBasePersonnelCapacity, calculateUsedPersonnelCapacity } from '../data/basePersonnel';
+import { 
+  calculatePowerStatus, 
+  getContinent, 
+  getInitialPersonnelCapacity,
+  calculateUpgradeCost,
+  calculateBaseSize
+} from '../utils/baseUtils';
 
 interface BaseModalProps {
   onClose: () => void;
@@ -35,25 +42,6 @@ const BaseModal: React.FC<BaseModalProps> = ({
 }) => {
   // If component is not open, don't render anything
   if (!isOpen) return null;
-
-  const calculatePowerStatus = (base: Base) => {
-    if (!base || !base.facilities) {
-      throw new Error('Invalid base provided');
-    }
-    const totalGeneration = base.facilities
-      .filter(f => f.powerUsage < 0)
-      .reduce((acc, f) => acc + Math.abs(f.powerUsage), 0);
-    
-    const totalUsage = base.facilities
-      .filter(f => f.powerUsage > 0)
-      .reduce((acc, f) => acc + f.powerUsage, 0);
-
-    return {
-      generation: totalGeneration,
-      usage: totalUsage,
-      surplus: totalGeneration - totalUsage,
-    };
-  };
 
   // If this is being used as a generic modal with children
   if (children) {
@@ -151,28 +139,6 @@ const BaseModal: React.FC<BaseModalProps> = ({
   };
 
   const baseCost = 2000000; // $2M for a new base
-  
-  // Helper functions to safely access continent properties
-  const getContinent = (selected: Continent | ContinentSelection | null | undefined): Continent => {
-    if (!selected) return {} as Continent;
-    return 'continent' in selected ? selected.continent : selected;
-  };
-
-  // Calculate continent personnel bonus
-  const getPersonnelMultiplier = () => {
-    const continent = getContinent(selectedContinent);
-    return continent?.personnelMultiplier || 1;
-  };
-
-  // For new bases, calculate initial housing capacity from barracks
-  const getInitialPersonnelCapacity = () => {
-    // Initial facilities include a level 1 barracks
-    // Level 1 barracks provides 15 personnel housing capacity
-    const baseCapacity = 15;
-    
-    // Apply continent multiplier
-    return Math.round(baseCapacity * getPersonnelMultiplier());
-  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -223,21 +189,13 @@ const BaseModal: React.FC<BaseModalProps> = ({
         vehicles: [],
         radarRange: 0,
         radarEffectiveness: 0,
-        personnelCapacity: getInitialPersonnelCapacity(),
+        personnelCapacity: getInitialPersonnelCapacity(selectedContinent),
       };
 
       onCreate(newBase);
     } catch (error) {
       console.error('Error creating base:', error);
     }
-  };
-
-  const calculateUpgradeCost = (facility: Facility) => {
-    if (!facility || !facility.type) {
-      throw new Error('Invalid facility provided');
-    }
-    const facilityType = FACILITY_TYPES[facility.type];
-    return Math.floor(facilityType.baseCost * Math.pow(facilityType.upgradeMultiplier, facility.level));
   };
 
   const canCreate = name && (!existingBase && availableFunds >= baseCost);
@@ -290,13 +248,6 @@ const BaseModal: React.FC<BaseModalProps> = ({
       console.error('Failed to add facility:', error);
       alert('An error occurred while adding the facility');
     }
-  };
-
-  const calculateBaseSize = (base: Base) => {
-    if (!base || !base.facilities) {
-      throw new Error('Invalid base provided');
-    }
-    return base.facilities.reduce((acc, f) => acc + FACILITY_TYPES[f.type].size, 0);
   };
 
   return (
@@ -469,7 +420,7 @@ const BaseModal: React.FC<BaseModalProps> = ({
                     </div>
                     <div>
                       <div className="text-sm text-slate-400 mb-1">Initial Housing Capacity</div>
-                      <div className="text-xl font-bold text-white">{getInitialPersonnelCapacity()}</div>
+                      <div className="text-xl font-bold text-white">{getInitialPersonnelCapacity(selectedContinent)}</div>
                       <div className="text-xs text-slate-400 mt-1">
                         From Level 1 Barracks
                       </div>
