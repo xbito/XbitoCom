@@ -318,12 +318,12 @@ const BaseModal: React.FC<BaseModalProps> = ({
                   <div 
                     className="h-full bg-green-500"
                     style={{ 
-                      width: `${(calculateBaseSize(existingBase) / existingBase.maxSize) * 100}%`
+                      width: `${(calculateBaseSize({...existingBase, facilities: localFacilities}) / existingBase.maxSize) * 100}%`
                     }}
                   />
                 </div>
                 <span className="text-sm text-slate-400">
-                  {calculateBaseSize(existingBase)} / {existingBase.maxSize} facility spaces
+                  {calculateBaseSize({...existingBase, facilities: localFacilities})} / {existingBase.maxSize} facility spaces
                 </span>
               </div>
               <p className="text-xs text-slate-400 mt-1">
