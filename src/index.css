@@ -69,3 +69,70 @@
 .continent-path:hover {
   filter: url(#glow) brightness(1.5);
 }
+
+@layer base {
+  /* UFO Type-specific animations */
+  .ufo-scout {
+    animation: hover 3s ease-in-out infinite;
+  }
+
+  .ufo-fighter {
+    animation: aggressive 2s ease-in-out infinite;
+  }
+
+  .ufo-transport {
+    animation: steady 4s linear infinite;
+  }
+
+  .ufo-harvester {
+    animation: bob 5s ease-in-out infinite;
+  }
+
+  .ufo-mothership {
+    animation: pulse 6s ease-in-out infinite;
+  }
+
+  .ufo-science {
+    animation: fade 4s ease-in-out infinite;
+  }
+
+  .ufo-builder {
+    animation: construct 4s ease-in-out infinite;
+  }
+
+  @keyframes hover {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-5px); }
+  }
+
+  @keyframes aggressive {
+    0%, 100% { transform: rotate(0deg); }
+    25% { transform: rotate(-5deg); }
+    75% { transform: rotate(5deg); }
+  }
+
+  @keyframes steady {
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-2px); }
+  }
+
+  @keyframes bob {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-3px) rotate(2deg); }
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); filter: brightness(1); }
+    50% { transform: scale(1.05); filter: brightness(1.2); }
+  }
+
+  @keyframes fade {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.7; }
+  }
+
+  @keyframes construct {
+    0%, 100% { transform: rotate(0deg); }
+    50% { transform: rotate(45deg); }
+  }
+}

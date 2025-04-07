@@ -1,7 +1,6 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Base, Continent, UFO, Point2D, ContinentSelection } from '../types';
+import { Base, Continent, UFO, ContinentSelection } from '../types';
 import { CONTINENTS } from '../data/continents';
-import { AlertCircle } from 'lucide-react';
 
 // Animation speed in pixels per second
 const UFO_SPEED = 50;
@@ -29,7 +28,6 @@ const WorldMap: React.FC<WorldMapProps> = ({
 }) => {
   const [hoveredContinent, setHoveredContinent] = useState<Continent | null>(null);
   const [hoveredUFO, setHoveredUFO] = useState<UFO | null>(null);
-  const [radarIntersections, setRadarIntersections] = useState<{[key: string]: { x: number, y: number }[]}>({});
   const animationFrameRef = useRef<number>();
   const lastTimeRef = useRef<number>(0);
 
@@ -41,15 +39,6 @@ const WorldMap: React.FC<WorldMapProps> = ({
     const baseRange = 60;
     const radarBonus = radarFacility.level * 0.2;
     return baseRange * (1 + radarBonus);
-  };
-
-  // Check if a point is inside radar coverage
-  const isInRadarCoverage = (point: Point2D, base: Base): boolean => {
-    const position = getBasePosition(base);
-    const radius = getRadarRadius(base);
-    const dx = point.x - position.x;
-    const dy = point.y - position.y;
-    return (dx * dx + dy * dy) <= radius * radius;
   };
 
   // Calculate radar opacity based on radar level
@@ -66,9 +55,7 @@ const WorldMap: React.FC<WorldMapProps> = ({
       const deltaTime = timestamp - lastTimeRef.current;
       lastTimeRef.current = timestamp;
 
-      // Update UFO positions and check radar intersections
-      const newIntersections: {[key: string]: { x: number, y: number }[]} = {};
-
+      // Update UFO positions
       [...activeUFOs, ...detectedUFOs].forEach(ufo => {
         if (!ufo.trajectory) return;
 
@@ -78,18 +65,6 @@ const WorldMap: React.FC<WorldMapProps> = ({
         if (progress <= 1) {
           const currentX = ufo.trajectory.start.x + (ufo.trajectory.end.x - ufo.trajectory.start.x) * progress;
           const currentY = ufo.trajectory.start.y + (ufo.trajectory.end.y - ufo.trajectory.start.y) * progress;
-          
-          // Check radar intersections if radar coverage is shown
-          if (showRadarCoverage) {
-            bases.forEach(base => {
-              if (isInRadarCoverage({ x: currentX, y: currentY }, base)) {
-                if (!newIntersections[ufo.id]) {
-                  newIntersections[ufo.id] = [];
-                }
-                newIntersections[ufo.id].push({ x: currentX, y: currentY });
-              }
-            });
-          }
 
           // Update UFO position
           ufo.trajectory.progress = progress;
@@ -97,7 +72,6 @@ const WorldMap: React.FC<WorldMapProps> = ({
         }
       });
 
-      setRadarIntersections(newIntersections);
       animationFrameRef.current = requestAnimationFrame(animate);
     };
 
@@ -165,6 +139,32 @@ const WorldMap: React.FC<WorldMapProps> = ({
     const ufoSize = 4 + ufo.size * 2;
     const position = ufo.trajectory.currentPosition;
     
+    const renderUFOShape = () => {
+      switch (ufo.shape) {
+        case 'triangle':
+          return `M ${-ufoSize} ${ufoSize} L ${ufoSize} ${ufoSize} L 0 ${-ufoSize} Z`;
+        case 'diamond':
+          return `M ${-ufoSize} 0 L 0 ${ufoSize} L ${ufoSize} 0 L 0 ${-ufoSize} Z`;
+        case 'rectangle':
+          return `M ${-ufoSize} ${-ufoSize/2} H ${ufoSize} V ${ufoSize/2} H ${-ufoSize} Z`;
+        case 'hexagon':
+          const a = ufoSize * 0.866; // cos(30°) * size
+          return `M ${-ufoSize} 0 L ${-ufoSize/2} ${-a} L ${ufoSize/2} ${-a} L ${ufoSize} 0 L ${ufoSize/2} ${a} L ${-ufoSize/2} ${a} Z`;
+        case 'pentagon':
+          const r = ufoSize;
+          const points = Array.from({length: 5}).map((_, i) => {
+            const angle = (i * 2 * Math.PI / 5) - Math.PI/2;
+            return `${r * Math.cos(angle)},${r * Math.sin(angle)}`;
+          }).join(' ');
+          return `M ${points} Z`;
+        case 'octagon':
+          const s = ufoSize * 0.4142; // tan(22.5°) * size
+          return `M ${-ufoSize} ${-s} L ${-s} ${-ufoSize} L ${s} ${-ufoSize} L ${ufoSize} ${-s} L ${ufoSize} ${s} L ${s} ${ufoSize} L ${-s} ${ufoSize} L ${-ufoSize} ${s} Z`;
+        default:
+          return undefined;
+      }
+    };
+
     return (
       <g key={ufo.id} className="ufo-group">
         {/* UFO Trajectory line */}
@@ -179,57 +179,44 @@ const WorldMap: React.FC<WorldMapProps> = ({
           />
         )}
 
-        {/* UFO icon and detection effects */}
+        {/* Current position marker */}
         {(isDetected || showAllUFOTrajectories) && (
-          <g
-            transform={`translate(${position.x} ${position.y})`}
-            onClick={() => onUFOClick?.(ufo)}
-            onMouseEnter={() => setHoveredUFO(ufo)}
-            onMouseLeave={() => setHoveredUFO(null)}
-            className="cursor-pointer"
-          >
-            {/* UFO detection radius for undetected UFOs */}
-            {!isDetected && showAllUFOTrajectories && (
-              <circle
-                r={ufoSize * 3}
-                fill="none"
-                stroke="#666666"
-                strokeWidth="1"
-                strokeDasharray="2 4"
-                className="opacity-30"
-              />
-            )}
+          <line
+            x1={ufo.trajectory.start.x}
+            y1={ufo.trajectory.start.y}
+            x2={position.x}
+            y2={position.y}
+            stroke={isDetected ? "#ef4444" : "#666666"}
+            strokeWidth={isDetected ? "3" : "2"}
+            className="opacity-75"
+            filter="url(#glow)"
+          />
+        )}
 
-            {/* UFO icon */}
+        {/* UFO icon with shape and color */}
+        <g
+          transform={`translate(${position.x} ${position.y})`}
+          onClick={() => onUFOClick?.(ufo)}
+          onMouseEnter={() => setHoveredUFO(ufo)}
+          onMouseLeave={() => setHoveredUFO(null)}
+          className={`cursor-pointer ufo-${ufo.type}`}
+        >
+          {ufo.shape === 'circle' ? (
             <circle
               r={ufoSize}
-              fill={isDetected ? "#ef4444" : "#666666"}
+              fill={isDetected ? ufo.color : "#666666"}
               className={`${isDetected ? "animate-pulse" : ""} transition-all duration-300`}
               filter={hoveredUFO?.id === ufo.id ? "url(#strongGlow)" : "url(#glow)"}
             />
-
-            {/* Alert indicator for detected UFOs */}
-            {isDetected && (
-              <g transform={`translate(${ufoSize * 1.5} ${-ufoSize * 1.5})`}>
-                <AlertCircle size={16} className="text-red-500 animate-pulse" />
-              </g>
-            )}
-
-            {/* Radar intersection effect */}
-            {showRadarCoverage && radarIntersections[ufo.id]?.map((_, index) => (
-              <circle
-                key={`intersection-${index}`}
-                cx={0}
-                cy={0}
-                r={ufoSize * 2}
-                fill="none"
-                stroke="#22c55e"
-                strokeWidth="2"
-                className="animate-ping"
-              />
-            ))}
-          </g>
-        )}
+          ) : (
+            <path
+              d={renderUFOShape()}
+              fill={isDetected ? ufo.color : "#666666"}
+              className={`${isDetected ? "animate-pulse" : ""} transition-all duration-300`}
+              filter={hoveredUFO?.id === ufo.id ? "url(#strongGlow)" : "url(#glow)"}
+            />
+          )}
+        </g>
 
         {/* UFO info tooltip */}
         {hoveredUFO?.id === ufo.id && (isDetected || showAllUFOTrajectories) && (
@@ -243,8 +230,9 @@ const WorldMap: React.FC<WorldMapProps> = ({
             <div className="bg-black/80 text-white p-2 rounded text-sm border border-red-500/30">
               <div className="font-bold">{ufo.name}</div>
               <div>Type: {ufo.type}</div>
-              <div>Speed: {ufo.speed}</div>
+              <div>Speed: {ufo.speed} km/h</div>
               <div>Status: {ufo.status}</div>
+              <div>Progress: {Math.round(ufo.trajectory.progress * 100)}%</div>
             </div>
           </foreignObject>
         )}
