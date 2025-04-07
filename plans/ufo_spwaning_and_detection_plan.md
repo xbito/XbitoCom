@@ -72,15 +72,11 @@ UI displays UFOs moving across the map with appropriate indicators; alerts appea
     - [x] UFOs will have minimal crew requirements and maximum capacities. For example, a scout requires 1 pilot but it can also carry 1 extra pilot and up to 2 science officers for research purposes. A "Battleship" might have a crew of 10 but can carry up to 20 personnel for boarding parties or special missions. This will be implemented in a later phase, but the groundwork should be laid now. The idea is that the player can capture UFOs and use them for their own purposes, such as boarding parties or special missions. The game will have a "boarding party" mechanic where players can send personnel to board a UFO and capture it. This will be implemented in a later phase, but the groundwork should be laid now.
 
 - **UFO Visualization Review**
-    - [ ] Review the current UFO visualizations to ensure they are distinct and visually appealing.
-    - [ ] Add shape and color as properties for all UFO types.
-    - [ ] Ensure that each UFO type has a unique appearance that matches its characteristics (e.g., size, shape, color).
-    - [ ] Add new visual effects if necessary to enhance the appearance of new UFO types.
-
-- **UFO properties revamp**
-    - [ ] Ensure that stealth is a hidden attribute of the UFO that affects detection probability. Stealth should be a percentage value that reduces the effective radar range when calculating detection chances. For example, a UFO with 50% stealth will only be detected at half the radar range.
-    - [ ] Implement a stealth detection mechanic that allows advanced radar systems or specific research projects to counteract UFO stealth. This means that even if a UFO has stealth, it can still be detected if the radar system is advanced enough or if the player has researched specific technologies.
-    - [ ] Add a "jamming" property to certain UFO types that can interfere with radar detection. Jamming should be a percentage value that reduces the effective radar range by a certain amount. For example, a UFO with 30% jamming will reduce the radar range by 30% when calculating detection chances.
+    - [x] Review the current UFO visualizations to ensure they are distinct and visually appealing.
+    - [x] Add shape and color as properties for all UFO types.
+    - [x] Ensure that each UFO type has a unique appearance that matches its characteristics (e.g., size, shape, color).
+    - [x] Add new visual effects if necessary to enhance the appearance of new UFO types.
+    - [x] Performance improvements for UFO visualization and the world map.
 
 
 **Verification:**
@@ -110,6 +106,11 @@ Different UFO types appear with distinct visuals; UFO information panel shows ty
     - [ ] Design research report UI for completed radar technologies.
     - [ ] Add research prerequisites for advanced radar capabilities
     - [ ] Implement "breakthrough" mechanics for radar research
+
+- **UFO properties revamp**
+    - [ ] Ensure that stealth is a hidden attribute of the UFO that affects detection probability. Stealth should be a percentage value that reduces the effective radar range when calculating detection chances. For example, a UFO with 50% stealth will only be detected at half the radar range.
+    - [ ] Implement a stealth detection mechanic that allows advanced radar systems or specific research projects to counteract UFO stealth. This means that even if a UFO has stealth, it can still be detected if the radar system is advanced enough or if the player has researched specific technologies.
+    - [ ] Add a "jamming" property to certain UFO types that can interfere with radar detection. Jamming should be a percentage value that reduces the effective radar range by a certain amount. For example, a UFO with 30% jamming will reduce the radar range by 30% when calculating detection chances.
 
 
 **Verification:**  
