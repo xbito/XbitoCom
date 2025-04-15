@@ -1,11 +1,9 @@
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { Base, Continent, UFO, ContinentSelection } from '../types';
 import { CONTINENTS } from '../data/continents';
 
 // Animation speed in pixels per second
 const UFO_SPEED = 50;
-// Throttle animation frames to 30fps for better performance
-const FRAME_THROTTLE = 1000 / 30;
 
 interface WorldMapProps {
   bases: Base[];
@@ -32,48 +30,43 @@ const WorldMap: React.FC<WorldMapProps> = ({
   const [hoveredUFO, setHoveredUFO] = useState<UFO | null>(null);
   const animationFrameRef = useRef<number>();
   const lastTimeRef = useRef<number>(0);
-  const lastFrameTimeRef = useRef<number>(0);
 
-  // Memoize radar calculations
-  const getRadarRadius = useCallback((base: Base): number => {
+  // Calculate radar coverage radius based on radar level and effectiveness
+  const getRadarRadius = (base: Base): number => {
     const radarFacility = base.facilities.find(f => f.type === 'radar');
     if (!radarFacility) return 0;
     
     const baseRange = 60;
     const radarBonus = radarFacility.level * 0.2;
     return baseRange * (1 + radarBonus);
-  }, []);
+  };
 
-  const getRadarOpacity = useCallback((base: Base): number => {
+  // Calculate radar opacity based on radar level
+  const getRadarOpacity = (base: Base): number => {
     const radarFacility = base.facilities.find(f => f.type === 'radar');
     if (!radarFacility) return 0;
-    return 0.3 + (radarFacility.level * 0.1);
-  }, []);
+    return 0.3 + (radarFacility.level * 0.1); // Base opacity 0.3, increasing by 0.1 per level
+  };
 
-  // Animation loop with throttling
+  // Animation loop
   useEffect(() => {
     const animate = (timestamp: number) => {
       if (!lastTimeRef.current) lastTimeRef.current = timestamp;
-      
-      // Throttle frame rate
-      const timeSinceLastFrame = timestamp - lastFrameTimeRef.current;
-      if (timeSinceLastFrame < FRAME_THROTTLE) {
-        animationFrameRef.current = requestAnimationFrame(animate);
-        return;
-      }
-
       const deltaTime = timestamp - lastTimeRef.current;
       lastTimeRef.current = timestamp;
-      lastFrameTimeRef.current = timestamp;
 
-      // Update UFO positions with optimized calculation
+      // Update UFO positions
       [...activeUFOs, ...detectedUFOs].forEach(ufo => {
         if (!ufo.trajectory) return;
+
+        // Calculate new position based on speed and time
         const progress = ufo.trajectory.progress + (deltaTime / 1000) * (UFO_SPEED / 1000);
         
         if (progress <= 1) {
           const currentX = ufo.trajectory.start.x + (ufo.trajectory.end.x - ufo.trajectory.start.x) * progress;
           const currentY = ufo.trajectory.start.y + (ufo.trajectory.end.y - ufo.trajectory.start.y) * progress;
+
+          // Update UFO position
           ufo.trajectory.progress = progress;
           ufo.trajectory.currentPosition = { x: currentX, y: currentY };
         }
@@ -89,16 +82,16 @@ const WorldMap: React.FC<WorldMapProps> = ({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [activeUFOs, detectedUFOs]);
+  }, [activeUFOs, detectedUFOs, bases, showRadarCoverage]);
 
-  // Memoize map click handler
-  const handleMapClick = useCallback((e: React.MouseEvent<SVGElement>) => {
+  const handleMapClick = (e: React.MouseEvent<SVGElement>) => {
     if (!onContinentSelect) return;
 
+    // Get click coordinates relative to SVG viewBox
     const svgElement = e.currentTarget;
     const rect = svgElement.getBoundingClientRect();
-    const clickX = ((e.clientX - rect.left) / rect.width) * 900;
-    const clickY = ((e.clientY - rect.top) / rect.height) * 500;
+    const clickX = ((e.clientX - rect.left) / rect.width) * 900; // Scale to SVG width
+    const clickY = ((e.clientY - rect.top) / rect.height) * 500;  // Scale to SVG height
 
     const clickedContinent = Object.values(CONTINENTS).find(continent => {
       const path = document.getElementById(`continent-${continent.id}`);
@@ -113,50 +106,31 @@ const WorldMap: React.FC<WorldMapProps> = ({
         clickY
       });
     }
-  }, [onContinentSelect]);
+  };
 
-  // Memoize base position calculation
-  const getBasePosition = useCallback((base: Base) => {
+  const getBasePosition = (base: Base) => {
     const continent = base?.continent;
     if (!continent || !continent.coordinates) {
       return { x: 0, y: 0 };
     }
 
+    // If base has specific SVG coordinates, use them directly
     if (base.x >= 0 && base.x <= 1000 && base.y >= 0 && base.y <= 500) {
       return { x: base.x, y: base.y };
     }
 
+    // Otherwise convert from percentage coordinates
     const x = continent.coordinates.x1 + 
       ((continent.coordinates.x2 - continent.coordinates.x1) * (base.x / 100));
     const y = continent.coordinates.y1 + 
       ((continent.coordinates.y2 - continent.coordinates.y1) * (base.y / 100));
     
+    // Convert percentage to SVG coordinates
     return {
       x: (x / 100) * 1000,
       y: (y / 100) * 500
     };
-  }, []);
-
-  // Simplify filters with reduced blur radius
-  const svgFilters = useMemo(() => (
-    <defs>
-      <filter id="glow">
-        <feGaussianBlur stdDeviation="2" result="coloredBlur" />
-        <feMerge>
-          <feMergeNode in="coloredBlur" />
-          <feMergeNode in="SourceGraphic" />
-        </feMerge>
-      </filter>
-
-      <filter id="strongGlow">
-        <feGaussianBlur stdDeviation="3" result="coloredBlur" />
-        <feMerge>
-          <feMergeNode in="coloredBlur" />
-          <feMergeNode in="SourceGraphic" />
-        </feMerge>
-      </filter>
-    </defs>
-  ), []);
+  };
 
   // Render UFO icon and trajectory
   const renderUFO = (ufo: UFO, isDetected: boolean) => {
@@ -281,32 +255,51 @@ const WorldMap: React.FC<WorldMapProps> = ({
         onClick={handleMapClick}
       >
         {/* Enhanced tactical grid background */}
-        {svgFilters}
-        <pattern id="smallGrid" width="20" height="20" patternUnits="userSpaceOnUse">
-          <path 
-            d="M 20 0 L 0 0 0 20" 
-            fill="none" 
-            stroke="rgba(34, 197, 94, 0.1)" 
-            strokeWidth="0.5"
-            className="animate-pulse"
-          />
-        </pattern>
-        <pattern id="grid" width="100" height="100" patternUnits="userSpaceOnUse">
-          <rect width="100" height="100" fill="url(#smallGrid)" />
-          <path 
-            d="M 100 0 L 0 0 0 100" 
-            fill="none" 
-            stroke="rgba(34, 197, 94, 0.15)" 
-            strokeWidth="1"
-          />
-        </pattern>
-        
-        {/* Radial gradient for background */}
-        <radialGradient id="mapBackground" cx="50%" cy="50%" r="70%" fx="50%" fy="50%">
-          <stop offset="0%" stopColor="#1c1c1c" stopOpacity="0.9" />
-          <stop offset="70%" stopColor="#0f0f0f" stopOpacity="0.95" />
-          <stop offset="100%" stopColor="#000000" stopOpacity="1" />
-        </radialGradient>
+        <defs>
+          <pattern id="smallGrid" width="20" height="20" patternUnits="userSpaceOnUse">
+            <path 
+              d="M 20 0 L 0 0 0 20" 
+              fill="none" 
+              stroke="rgba(34, 197, 94, 0.1)" 
+              strokeWidth="0.5"
+              className="animate-pulse"
+            />
+          </pattern>
+          <pattern id="grid" width="100" height="100" patternUnits="userSpaceOnUse">
+            <rect width="100" height="100" fill="url(#smallGrid)" />
+            <path 
+              d="M 100 0 L 0 0 0 100" 
+              fill="none" 
+              stroke="rgba(34, 197, 94, 0.15)" 
+              strokeWidth="1"
+            />
+          </pattern>
+          
+          {/* Enhanced glow effect for continents */}
+          <filter id="glow">
+            <feGaussianBlur stdDeviation="3.5" result="coloredBlur" />
+            <feMerge>
+              <feMergeNode in="coloredBlur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+
+          {/* Stronger glow effect for hover state */}
+          <filter id="strongGlow">
+            <feGaussianBlur stdDeviation="5" result="coloredBlur" />
+            <feMerge>
+              <feMergeNode in="coloredBlur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+
+          {/* Radial gradient for background */}
+          <radialGradient id="mapBackground" cx="50%" cy="50%" r="70%" fx="50%" fy="50%">
+            <stop offset="0%" stopColor="#1c1c1c" stopOpacity="0.9" />
+            <stop offset="70%" stopColor="#0f0f0f" stopOpacity="0.95" />
+            <stop offset="100%" stopColor="#000000" stopOpacity="1" />
+          </radialGradient>
+        </defs>
 
         {/* Dark background with radial gradient */}
         <rect width="100%" height="100%" fill="url(#mapBackground)" />
@@ -393,7 +386,7 @@ const WorldMap: React.FC<WorldMapProps> = ({
           onMouseLeave={() => setHoveredContinent(null)}
         />
 
-        {/* Render Radar Coverage with reduced animations */}
+        {/* Render Radar Coverage */}
         {showRadarCoverage && bases.map((base) => {
           const position = getBasePosition(base);
           const radius = getRadarRadius(base);
@@ -406,6 +399,7 @@ const WorldMap: React.FC<WorldMapProps> = ({
               <defs>
                 <radialGradient id={`radar-gradient-${base.id}`}>
                   <stop offset="0%" stopColor="#22c55e" stopOpacity={opacity * 0.9} />
+                  <stop offset="50%" stopColor="#15803d" stopOpacity={opacity * 0.5} />
                   <stop offset="100%" stopColor="#15803d" stopOpacity={0} />
                 </radialGradient>
               </defs>
@@ -417,21 +411,54 @@ const WorldMap: React.FC<WorldMapProps> = ({
                 r={radius}
                 fill={`url(#radar-gradient-${base.id})`}
                 className="animate-pulse pointer-events-none"
-                style={{ animationDuration: '3s' }}
               />
               
-              {/* Single rotating radar ring */}
+              {/* Primary radar ring with centered rotation */}
               <g transform={`translate(${position.x} ${position.y})`}>
-                <g className="animate-spin" style={{ transformOrigin: '0 0', animationDuration: '12s' }}>
+                <g className="animate-spin" style={{ transformOrigin: '0 0', animationDuration: '10s' }}>
                   <circle
                     cx="0"
                     cy="0"
                     r={radius}
                     fill="none"
                     stroke="#22c55e"
-                    strokeWidth="1"
+                    strokeWidth="1.5"
                     strokeDasharray="4 4"
-                    className="pointer-events-none opacity-70"
+                    className="pointer-events-none"
+                  />
+                </g>
+              </g>
+
+              {/* Secondary radar ring with centered rotation */}
+              <g transform={`translate(${position.x} ${position.y})`}>
+                <g className="animate-spin" style={{ transformOrigin: '0 0', animationDuration: '15s' }}>
+                  <circle
+                    cx="0"
+                    cy="0"
+                    r={radius * 0.75}
+                    fill="none"
+                    stroke="#22c55e"
+                    strokeWidth="1"
+                    strokeDasharray="8 8"
+                    className="pointer-events-none"
+                    opacity={0.7}
+                  />
+                </g>
+              </g>
+
+              {/* Tertiary radar ring with centered rotation */}
+              <g transform={`translate(${position.x} ${position.y})`}>
+                <g className="animate-spin" style={{ transformOrigin: '0 0', animationDuration: '8s' }}>
+                  <circle
+                    cx="0"
+                    cy="0"
+                    r={radius * 0.5}
+                    fill="none"
+                    stroke="#22c55e"
+                    strokeWidth="0.75"
+                    strokeDasharray="4 4"
+                    className="pointer-events-none"
+                    opacity={0.5}
                   />
                 </g>
               </g>
@@ -475,8 +502,8 @@ const WorldMap: React.FC<WorldMapProps> = ({
           );
         })}
 
-        {/* Reduced number of background stars */}
-        {Array.from({ length: 25 }).map((_, i) => (
+        {/* Distant stars/dots effect in the background */}
+        {Array.from({ length: 50 }).map((_, i) => (
           <circle
             key={`star-${i}`}
             cx={Math.random() * 900}
@@ -484,7 +511,7 @@ const WorldMap: React.FC<WorldMapProps> = ({
             r={Math.random() * 1.5}
             fill="#ffffff"
             opacity={Math.random() * 0.5 + 0.1}
-            className={i % 3 === 0 ? "animate-pulse" : ""}
+            className={i % 2 === 0 ? "animate-pulse" : ""}
           />
         ))}
       </svg>
