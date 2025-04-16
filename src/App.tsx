@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from 'react';
-import { Globe2, DollarSign, Clock, ChevronRight } from 'lucide-react';
+import { Globe2, DollarSign, Clock, ChevronRight, Info } from 'lucide-react';
 import WorldMap from './components/WorldMap';
 import ResourcePanel from './components/ResourcePanel';
 import SidePanel from './components/SidePanel';
@@ -66,7 +66,8 @@ function App() {
   const [currentEvent, setCurrentEvent] = useState<{ event: GameEvent; message: string } | null>(null);
   const [yearlyReview, setYearlyReview] = useState<YearlyReview | null>(null);
   const [selectedHangarBase, setSelectedHangarBase] = useState<Base | null>(null);
-  
+  const [researchNotification, setResearchNotification] = useState<string | null>(null); // State for research start notification
+
   // State to track user actions during a turn
   const [actionsPerformed, setActionsPerformed] = useState<boolean>(false);
   // State for the confirmation dialog
@@ -474,7 +475,17 @@ function App() {
         }),
       };
     });
-    setActiveModal(null);
+    setActiveModal(null); // Close the modal
+
+    // Set the notification message
+    const notificationMsg = `Research project '${project.name}' started. Estimated completion: ${project.duration} days.`;
+    console.log(`%c[${new Date().toISOString()}] [App] ${notificationMsg}`, 'color: cyan;');
+    setResearchNotification(notificationMsg);
+
+    // Clear the notification after 5 seconds
+    setTimeout(() => {
+      setResearchNotification(null);
+    }, 5000);
   }, [addTransaction]);
 
   const handleContinentSelect = useCallback((selection: ContinentSelection) => {
@@ -676,7 +687,16 @@ function App() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-slate-900 text-white relative">
+    <div className="flex h-screen bg-gray-900 text-white relative">
+      {/* Notification Area */}
+      {researchNotification && (
+        <div className="absolute top-5 right-5 bg-gradient-to-r from-green-600 to-green-700 text-white p-4 rounded-lg shadow-lg z-[100] flex items-center gap-2 border border-green-800/50">
+          <Info size={20} />
+          <span>{researchNotification}</span>
+        </div>
+      )}
+
+      {/* Main Content */}
       <header className="bg-gradient-to-b from-slate-800 to-slate-900 p-4 border-b border-slate-700/50 shadow-lg">
         <div className="container mx-auto flex justify-between items-center">
           <h1 className="text-xl font-medium flex items-center gap-3">
