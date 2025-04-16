@@ -31,7 +31,7 @@ function App() {
     threatLevel: 0,
     activeResearchProject: null,
     completedResearch: [],
-    activeUFOs : [],
+    activeUFOs: [],
     detectedUFOs: [],
     interceptedUFOs: [],
     destroyedUFOs: [],
@@ -758,6 +758,7 @@ function App() {
             detectedUFOs={gameState.detectedUFOs}
             onUFOClick={() => {}} // We'll implement this later
             showAllUFOTrajectories={gameState.showAllUFOTrajectories}
+            completedResearch={gameState.completedResearch}
           />
         </div>
         <SidePanel 

@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Base, Continent, UFO, ContinentSelection } from '../types';
+import { Base, Continent, UFO, ContinentSelection, ResearchProject } from '../types';
 import { CONTINENTS } from '../data/continents';
+import { doesTrajectoryIntersectRadar } from '../utils/trajectory';
+import { getRadarRadius, getRadarOpacity } from '../utils/baseUtils';
 
 // Animation speed in pixels per second
 const UFO_SPEED = 50;
@@ -14,6 +16,7 @@ interface WorldMapProps {
   activeUFOs?: UFO[];
   detectedUFOs?: UFO[];
   onUFOClick?: (ufo: UFO) => void;
+  completedResearch: ResearchProject[]; // NEW PROP
 }
 
 const WorldMap: React.FC<WorldMapProps> = ({
@@ -24,29 +27,13 @@ const WorldMap: React.FC<WorldMapProps> = ({
   showAllUFOTrajectories = false,
   activeUFOs = [],
   detectedUFOs = [],
-  onUFOClick
+  onUFOClick,
+  completedResearch
 }) => {
   const [hoveredContinent, setHoveredContinent] = useState<Continent | null>(null);
   const [hoveredUFO, setHoveredUFO] = useState<UFO | null>(null);
   const animationFrameRef = useRef<number>();
   const lastTimeRef = useRef<number>(0);
-
-  // Calculate radar coverage radius based on radar level and effectiveness
-  const getRadarRadius = (base: Base): number => {
-    const radarFacility = base.facilities.find(f => f.type === 'radar');
-    if (!radarFacility) return 0;
-    
-    const baseRange = 60;
-    const radarBonus = radarFacility.level * 0.2;
-    return baseRange * (1 + radarBonus);
-  };
-
-  // Calculate radar opacity based on radar level
-  const getRadarOpacity = (base: Base): number => {
-    const radarFacility = base.facilities.find(f => f.type === 'radar');
-    if (!radarFacility) return 0;
-    return 0.3 + (radarFacility.level * 0.1); // Base opacity 0.3, increasing by 0.1 per level
-  };
 
   // Animation loop
   useEffect(() => {
@@ -130,6 +117,14 @@ const WorldMap: React.FC<WorldMapProps> = ({
       x: (x / 100) * 1000,
       y: (y / 100) * 500
     };
+  };
+
+  const getVisibleUFOs = (ufos: UFO[], bases: Base[]): UFO[] => {
+    // Only show UFOs whose trajectory intersects with at least one base's radar
+    return ufos.filter(ufo => {
+      if (!ufo.trajectory) return false;
+      return bases.some(base => doesTrajectoryIntersectRadar(ufo.trajectory!, base));
+    });
   };
 
   // Render UFO icon and trajectory
@@ -389,7 +384,7 @@ const WorldMap: React.FC<WorldMapProps> = ({
         {/* Render Radar Coverage */}
         {showRadarCoverage && bases.map((base) => {
           const position = getBasePosition(base);
-          const radius = getRadarRadius(base);
+          const radius = getRadarRadius(base, completedResearch);
           const opacity = getRadarOpacity(base);
           
           if (radius === 0) return null;
@@ -467,8 +462,12 @@ const WorldMap: React.FC<WorldMapProps> = ({
         })}
 
         {/* Render UFOs */}
-        {activeUFOs.map(ufo => renderUFO(ufo, false))}
-        {detectedUFOs.map(ufo => renderUFO(ufo, true))}
+        {showAllUFOTrajectories
+          ? getVisibleUFOs(activeUFOs, bases).map(ufo => renderUFO(ufo, false))
+          : activeUFOs.map(ufo => renderUFO(ufo, false))}
+        {showAllUFOTrajectories
+          ? getVisibleUFOs(detectedUFOs, bases).map(ufo => renderUFO(ufo, true))
+          : detectedUFOs.map(ufo => renderUFO(ufo, true))}
 
         {/* Bases with enhanced visualization and glow effect */}
         {bases.map((base) => {

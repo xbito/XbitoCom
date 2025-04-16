@@ -1,5 +1,60 @@
-import { Base, Facility, Continent, ContinentSelection } from '../types';
+import { Base, ResearchProject } from '../types';
 import { FACILITY_TYPES } from '../data/facilities';
+
+/**
+ * Calculates the radar coverage radius for a base, including bonuses from completed radar research projects.
+ * @param base The base to calculate for
+ * @param completedResearch Array of completed research projects
+ * @returns The radar coverage radius
+ */
+export function getRadarRadius(base: Base, completedResearch: ResearchProject[]): number {
+  const radarFacility = base.facilities.find(f => f.type === 'radar');
+  if (!radarFacility) return 0;
+
+  const baseRange = 60;
+  const radarBonus = radarFacility.level * 0.2;
+
+  // Calculate total radar coverage bonus from completed research
+  let researchCoverageBonus = 0;
+  for (const project of completedResearch) {
+    if (project.category === 'radar' && project.benefits && Array.isArray(project.benefits.bonuses)) {
+      for (const bonus of project.benefits.bonuses) {
+        if (bonus.type === 'coverage') {
+          researchCoverageBonus += bonus.value;
+        }
+      }
+    }
+  }
+
+  // Convert research bonus from percent to multiplier
+  const researchMultiplier = 1 + researchCoverageBonus / 100;
+  return baseRange * (1 + radarBonus) * researchMultiplier;
+}
+
+/**
+ * Calculates the radar opacity for a base based on radar facility level.
+ * @param base The base to calculate for
+ * @returns The radar opacity (0-1)
+ */
+export function getRadarOpacity(base: Base): number {
+  const radarFacility = base.facilities.find(f => f.type === 'radar');
+  if (!radarFacility) return 0;
+  return 0.3 + (radarFacility.level * 0.1); // Base opacity 0.3, increasing by 0.1 per level
+}
+
+/**
+ * Calculates the total facility space used in a base.
+ * @param base The base to calculate for
+ * @returns The total facility size used
+ */
+export function calculateBaseSize(base: Base): number {
+  if (!base || !Array.isArray(base.facilities)) return 0;
+  return base.facilities.reduce((sum, facility) => {
+    const facilityType = FACILITY_TYPES[facility.type];
+    const size = facilityType?.size ?? 1;
+    return sum + size;
+  }, 0);
+}
 
 /**
  * Calculates power generation, usage, and surplus for a base
@@ -10,15 +65,12 @@ export function calculatePowerStatus(base: Base) {
   if (!base || !base.facilities) {
     throw new Error('Invalid base provided');
   }
-  
   const totalGeneration = base.facilities
     .filter(f => f.powerUsage < 0)
     .reduce((acc, f) => acc + Math.abs(f.powerUsage), 0);
-  
   const totalUsage = base.facilities
     .filter(f => f.powerUsage > 0)
     .reduce((acc, f) => acc + f.powerUsage, 0);
-
   return {
     generation: totalGeneration,
     usage: totalUsage,
@@ -31,8 +83,8 @@ export function calculatePowerStatus(base: Base) {
  * @param selected Continent or ContinentSelection object
  * @returns Continent object
  */
-export function getContinent(selected: Continent | ContinentSelection | null | undefined): Continent {
-  if (!selected) return {} as Continent;
+export function getContinent(selected: any): any {
+  if (!selected) return {};
   return 'continent' in selected ? selected.continent : selected;
 }
 
@@ -41,7 +93,7 @@ export function getContinent(selected: Continent | ContinentSelection | null | u
  * @param selectedContinent The selected continent
  * @returns Personnel multiplier value
  */
-export function getPersonnelMultiplier(selectedContinent: Continent | ContinentSelection | null | undefined) {
+export function getPersonnelMultiplier(selectedContinent: any) {
   const continent = getContinent(selectedContinent);
   return continent?.personnelMultiplier || 1;
 }
@@ -51,11 +103,10 @@ export function getPersonnelMultiplier(selectedContinent: Continent | ContinentS
  * @param selectedContinent The selected continent
  * @returns Initial personnel capacity value
  */
-export function getInitialPersonnelCapacity(selectedContinent: Continent | ContinentSelection | null | undefined) {
+export function getInitialPersonnelCapacity(selectedContinent: any) {
   // Initial facilities include a level 1 barracks
   // Level 1 barracks provides 15 personnel housing capacity
   const baseCapacity = 15;
-  
   // Apply continent multiplier
   return Math.round(baseCapacity * getPersonnelMultiplier(selectedContinent));
 }
@@ -65,22 +116,10 @@ export function getInitialPersonnelCapacity(selectedContinent: Continent | Conti
  * @param facility The facility to calculate upgrade cost for
  * @returns The cost to upgrade the facility
  */
-export function calculateUpgradeCost(facility: Facility) {
+export function calculateUpgradeCost(facility: any) {
   if (!facility || !facility.type) {
     throw new Error('Invalid facility provided');
   }
   const facilityType = FACILITY_TYPES[facility.type];
   return Math.floor(facilityType.baseCost * Math.pow(facilityType.upgradeMultiplier, facility.level));
-}
-
-/**
- * Calculate the total size of facilities in a base
- * @param base The base to calculate size for
- * @returns Total facility spaces used
- */
-export function calculateBaseSize(base: Base) {
-  if (!base || !base.facilities) {
-    throw new Error('Invalid base provided');
-  }
-  return base.facilities.reduce((acc, f) => acc + FACILITY_TYPES[f.type].size, 0);
 }

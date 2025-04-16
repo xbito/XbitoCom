@@ -268,6 +268,10 @@ export interface ResearchProject {
     }[];
     prerequisites: string[];
   };
+  benefits: {
+    unlocks: string[];
+    bonuses: { type: string; value: number }[];
+  };
 }
 
 export type ResearchCategory =
@@ -283,7 +287,8 @@ export type ResearchCategory =
   | 'navigation'
   | 'materials'
   | 'power'
-  | 'logistics';
+  | 'logistics'
+  | 'radar';
 
 export interface Transaction {
   id: string;
