@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Microscope, X, Lock, CheckCircle, Clock, DollarSign, Users, Building2, Beaker, Zap } from 'lucide-react';
 import { GameState, ResearchProject, ResearchCategory } from '../types';
 import { RESEARCH_PROJECTS } from '../data/research';
+import { calculateScientistsInLabs } from '../utils/baseUtils'; // Import the moved function
 
 interface ResearchModalProps {
   onClose: () => void;
@@ -46,12 +47,12 @@ const ResearchModal: React.FC<ResearchModalProps> = ({
     // Check funds
     if (gameState.funds < project.cost) return false;
 
-    // Check if we have enough scientists
-    const availableScientists = gameState.availablePersonnel?.filter(
-      p => p.role === 'scientist' && p.status === 'available'
-    )?.length ?? 0;
-
-    if (availableScientists < project.requirements.scientists) return false;
+    // Check if we have enough scientists *in research labs*
+    const scientistsInLabs = calculateScientistsInLabs(gameState);
+    if (scientistsInLabs < project.requirements.scientists) {
+      console.warn(`%c[${new Date().toISOString()}] [ResearchModal] Cannot start research '${project.name}': Insufficient scientists. Required: ${project.requirements.scientists}, Available in labs: ${scientistsInLabs}`, 'color: orange;');
+      return false;
+    }
 
     // Check if we have the required facilities
     const hasFacilities = project.requirements.facilities.every((requirement: { type: string; level: number }) => {
@@ -68,16 +69,17 @@ const ResearchModal: React.FC<ResearchModalProps> = ({
   };
 
   const renderRequirements = (project: ResearchProject) => {
-    const availableScientists = gameState.availablePersonnel.filter(
-      p => p.role === 'scientist' && p.status === 'available'
-    ).length;
+    // Calculate scientists currently assigned to research labs
+    const scientistsInLabs = calculateScientistsInLabs(gameState);
 
     return (
       <div className="space-y-2 text-sm">
         <div className="flex items-center gap-2">
-          <Users size={16} className="text-green-400" />
-          <span className={availableScientists >= project.requirements.scientists ? 'text-green-400' : 'text-red-400'}>
-            {project.requirements.scientists} Scientists Required
+          {/* Use scientistsInLabs for color coding */}
+          <Users size={16} className={scientistsInLabs >= project.requirements.scientists ? 'text-green-400' : 'text-red-400'} />
+          {/* Use scientistsInLabs for text and color coding */}
+          <span className={scientistsInLabs >= project.requirements.scientists ? 'text-green-400' : 'text-red-400'}>
+            {project.requirements.scientists} Scientists Required (Available in Labs: {scientistsInLabs})
           </span>
         </div>
         {project.requirements.facilities.map((facility: { type: string; level: number }, index: number) => (
@@ -222,7 +224,7 @@ const ResearchModal: React.FC<ResearchModalProps> = ({
                     <Zap size={12} />
                     Requirements
                   </h5>
-                  {renderRequirements(project)}
+                  {renderRequirements(project)} 
                 </div>
 
                 <button

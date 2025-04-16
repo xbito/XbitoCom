@@ -109,7 +109,8 @@ export function canAssignPersonnelToFacility(
   
   // For other facilities, check regular personnel capacity
   const currentCount = facility.personnel.length;
-  const maxCapacity = facility.personnelCapacity || 0;
+  // Calculate the actual capacity instead of relying on a potentially stale property
+  const maxCapacity = calculateFacilityPersonnelCapacity(facility);
   
   if (currentCount >= maxCapacity) {
     return { 

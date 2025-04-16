@@ -1,4 +1,4 @@
-import { Base, ResearchProject } from '../types';
+import { Base, ResearchProject, GameState } from '../types'; // Added GameState
 import { FACILITY_TYPES } from '../data/facilities';
 
 /**
@@ -123,3 +123,34 @@ export function calculateUpgradeCost(facility: any) {
   const facilityType = FACILITY_TYPES[facility.type];
   return Math.floor(facilityType.baseCost * Math.pow(facilityType.upgradeMultiplier, facility.level));
 }
+
+/**
+ * Calculates the total number of scientists assigned to research labs across all bases.
+ * @param gameState The current game state.
+ * @returns The total count of scientists in research labs.
+ */
+export const calculateScientistsInLabs = (gameState: GameState): number => {
+  if (!gameState || !gameState.bases) {
+    console.warn(`%c[${new Date().toISOString()}] [baseUtils] calculateScientistsInLabs called with invalid gameState`, 'color: orange;', { gameState });
+    return 0;
+  }
+
+  let count = 0;
+  // Use for...of loop for better readability and safety
+  for (const base of gameState.bases) {
+    // Ensure base and base.facilities are valid before proceeding
+    if (base && Array.isArray(base.facilities)) {
+      for (const facility of base.facilities) {
+        // Ensure facility and facility.personnel are defined and facility is a research lab
+        if (facility && facility.type === 'research' && Array.isArray(facility.personnel)) {
+          // Count personnel directly assigned to the research lab who are scientists
+          // Ensure personnel object (p) exists before accessing its role
+          count += facility.personnel.filter(p => p && p.role === 'scientist').length;
+        }
+      }
+    }
+  }
+  // Updated log prefix
+  console.log(`%c[${new Date().toISOString()}] [baseUtils] Calculated scientists in labs: ${count}`, 'color: cyan;');
+  return count;
+};
