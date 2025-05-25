@@ -687,7 +687,7 @@ function App() {
   }, []);
 
   return (
-    <div className="flex h-screen bg-gray-900 text-white relative">
+    <div className="h-screen bg-gray-900 text-white relative flex flex-col">
       {/* Notification Area */}
       {researchNotification && (
         <div className="absolute top-5 right-5 bg-gradient-to-r from-green-600 to-green-700 text-white p-4 rounded-lg shadow-lg z-[100] flex items-center gap-2 border border-green-800/50">
@@ -696,7 +696,7 @@ function App() {
         </div>
       )}
 
-      {/* Main Content */}
+      {/* Header */}
       <header className="bg-gradient-to-b from-slate-800 to-slate-900 p-4 border-b border-slate-700/50 shadow-lg">
         <div className="container mx-auto flex justify-between items-center">
           <h1 className="text-xl font-medium flex items-center gap-3">
@@ -767,7 +767,8 @@ function App() {
         </div>
       </header>
 
-      <main className="container mx-auto p-4 flex gap-4">
+      {/* Main Content */}
+      <main className="flex-1 container mx-auto p-4 flex gap-4">
         <div className="flex-1">
           <WorldMap 
             bases={gameState.bases} 

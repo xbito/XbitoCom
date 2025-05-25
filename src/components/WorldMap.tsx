@@ -127,12 +127,28 @@ const WorldMap: React.FC<WorldMapProps> = ({
     });
   };
 
+  // Check if UFO type should be revealed based on research progress
+  const isUFOTypeRevealed = (): boolean => {
+    // UFO type is revealed if player has completed relevant research
+    const relevantResearch = [
+      'alien-biology',
+      'ufo-recovery', 
+      'ufo-detection-technology',
+      'field-medicine'
+    ];
+    
+    return relevantResearch.some(researchId => 
+      completedResearch.some(research => research.id === researchId)
+    );
+  };
+
   // Render UFO icon and trajectory
   const renderUFO = (ufo: UFO, isDetected: boolean) => {
     if (!ufo.trajectory) return null;
 
     const ufoSize = 4 + ufo.size * 2;
     const position = ufo.trajectory.currentPosition;
+    const typeRevealed = isUFOTypeRevealed();
     
     const renderUFOShape = () => {
       switch (ufo.shape) {
@@ -142,19 +158,22 @@ const WorldMap: React.FC<WorldMapProps> = ({
           return `M ${-ufoSize} 0 L 0 ${ufoSize} L ${ufoSize} 0 L 0 ${-ufoSize} Z`;
         case 'rectangle':
           return `M ${-ufoSize} ${-ufoSize/2} H ${ufoSize} V ${ufoSize/2} H ${-ufoSize} Z`;
-        case 'hexagon':
+        case 'hexagon': {
           const a = ufoSize * 0.866; // cos(30°) * size
           return `M ${-ufoSize} 0 L ${-ufoSize/2} ${-a} L ${ufoSize/2} ${-a} L ${ufoSize} 0 L ${ufoSize/2} ${a} L ${-ufoSize/2} ${a} Z`;
-        case 'pentagon':
+        }
+        case 'pentagon': {
           const r = ufoSize;
           const points = Array.from({length: 5}).map((_, i) => {
             const angle = (i * 2 * Math.PI / 5) - Math.PI/2;
             return `${r * Math.cos(angle)},${r * Math.sin(angle)}`;
           }).join(' ');
           return `M ${points} Z`;
-        case 'octagon':
+        }
+        case 'octagon': {
           const s = ufoSize * 0.4142; // tan(22.5°) * size
           return `M ${-ufoSize} ${-s} L ${-s} ${-ufoSize} L ${s} ${-ufoSize} L ${ufoSize} ${-s} L ${ufoSize} ${s} L ${s} ${ufoSize} L ${-s} ${ufoSize} L ${-ufoSize} ${s} Z`;
+        }
         default:
           return undefined;
       }
@@ -162,19 +181,22 @@ const WorldMap: React.FC<WorldMapProps> = ({
 
     return (
       <g key={ufo.id} className="ufo-group">
-        {/* UFO Trajectory line */}
+        {/* UFO Trajectory line - now with hover detection */}
         {(isDetected || showAllUFOTrajectories) && (
           <path
             d={`M ${ufo.trajectory.start.x} ${ufo.trajectory.start.y} L ${ufo.trajectory.end.x} ${ufo.trajectory.end.y}`}
             stroke={isDetected ? "#ef4444" : "#666666"}
-            strokeWidth={isDetected ? "2" : "1"}
+            strokeWidth={isDetected ? "8" : "6"}
             strokeDasharray={isDetected ? "4 4" : "1 2"}
-            className="opacity-50"
+            className="opacity-50 cursor-pointer"
             filter="url(#glow)"
+            onMouseEnter={() => setHoveredUFO(ufo)}
+            onMouseLeave={() => setHoveredUFO(null)}
+            onClick={() => onUFOClick?.(ufo)}
           />
         )}
 
-        {/* Current position marker */}
+        {/* Current position marker - also with hover detection */}
         {(isDetected || showAllUFOTrajectories) && (
           <line
             x1={ufo.trajectory.start.x}
@@ -182,9 +204,12 @@ const WorldMap: React.FC<WorldMapProps> = ({
             x2={position.x}
             y2={position.y}
             stroke={isDetected ? "#ef4444" : "#666666"}
-            strokeWidth={isDetected ? "3" : "2"}
-            className="opacity-75"
+            strokeWidth={isDetected ? "6" : "4"}
+            className="opacity-75 cursor-pointer"
             filter="url(#glow)"
+            onMouseEnter={() => setHoveredUFO(ufo)}
+            onMouseLeave={() => setHoveredUFO(null)}
+            onClick={() => onUFOClick?.(ufo)}
           />
         )}
 
@@ -213,21 +238,23 @@ const WorldMap: React.FC<WorldMapProps> = ({
           )}
         </g>
 
-        {/* UFO info tooltip */}
+        {/* UFO info tooltip - simplified and conditional */}
         {hoveredUFO?.id === ufo.id && (isDetected || showAllUFOTrajectories) && (
           <foreignObject
             x={position.x + ufoSize * 2}
-            y={position.y - 60}
+            y={position.y - 40}
             width={200}
-            height={120}
+            height={80}
             className="pointer-events-none"
           >
-            <div className="bg-black/80 text-white p-2 rounded text-sm border border-red-500/30">
-              <div className="font-bold">{ufo.name}</div>
-              <div>Type: {ufo.type}</div>
-              <div>Speed: {ufo.speed} km/h</div>
-              <div>Status: {ufo.status}</div>
-              <div>Progress: {Math.round(ufo.trajectory.progress * 100)}%</div>
+            <div className="bg-black/90 text-white p-3 rounded text-sm border border-red-500/50 shadow-lg">
+              <div className="font-bold text-red-400">{ufo.name}</div>
+              {typeRevealed ? (
+                <div className="text-gray-300">Type: <span className="text-white">{ufo.type}</span></div>
+              ) : (
+                <div className="text-gray-500 italic">Type: Unknown</div>
+              )}
+              <div className="text-gray-300">Size: <span className="text-white">{ufo.size}</span></div>
             </div>
           </foreignObject>
         )}
