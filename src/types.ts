@@ -31,6 +31,12 @@ export interface Personnel {
   assignedVehicleId: string | null;
   vehicleSpecialization?: VehicleSpecialization; // Added for pilots to specialize in vehicle types
   pilotAttributes?: PilotAttributes; // Added specific attributes for pilots
+  specialAbilities?: BattleCard[];  // Special crew cards unlocked by experience
+  battleStats?: PersonnelBattleStats;
+  statusEffects?: {
+    morale: number;     // Affects overall performance and card effectiveness (0-100)
+    fatigue: number;    // Reduces energy generation and command points (0-100)
+  };
 }
 
 export interface PilotAttributes {
@@ -81,6 +87,9 @@ export interface Vehicle {
   crew: Personnel[];
   baseId: string;
   stats: VehicleStats;
+  battleStats?: VehicleBattleStats;
+  activeBattleEffects?: BattleEffect[];
+  equippedCards?: BattleCard[];
 }
 
 export interface VehicleStats {
@@ -89,6 +98,22 @@ export interface VehicleStats {
   range: number;
   capacity: number;
   firepower: number;
+  energyGeneration: number;  // Energy generated per turn in battle
+  cardSlots: number;        // Number of action cards that can be equipped
+  equipmentSlots: number;   // Number of equipment cards that can be equipped
+}
+
+export interface VehicleBattleStats {
+  maxHealth: number;
+  currentHealth: number;
+  energyPerTurn: number;
+  maxEnergy: number;
+  currentEnergy: number;
+  accuracy: number;
+  evasion: number;
+  criticalChance: number;
+  cardSlots: number;
+  equipmentSlots: number;
 }
 
 export type VehicleType =
@@ -147,6 +172,55 @@ export interface Trajectory {
   crossedContinents?: string[]; // List of continent IDs that the trajectory crosses
 }
 
+export interface BattleCard {
+  id: string;
+  name: string;
+  type: CardType;
+  cost: number;
+  effects: CardEffect[];
+  requirements?: CardRequirement[];
+  cooldown?: number;
+  rarity: CardRarity;
+  imageUrl?: string;
+}
+
+export type CardType = 'action' | 'equipment' | 'crew' | 'environmental' | 'ufo_response';
+export type CardRarity = 'common' | 'uncommon' | 'rare' | 'legendary';
+
+export interface CardEffect {
+  type: 'damage' | 'heal' | 'buff' | 'debuff' | 'special';
+  target: 'self' | 'enemy' | 'both' | 'all';
+  value: number | string;
+  duration?: number;
+}
+
+export interface CardRequirement {
+  type: 'skill' | 'equipment' | 'research' | 'status';
+  value: number | string;
+  operator: '>' | '>=' | '=' | '<=' | '<';
+}
+
+export interface UFOBehaviorCard extends BattleCard {
+  aiConditions: {
+    triggerOn: 'health' | 'energy' | 'turn' | 'status';
+    threshold: number;
+    comparison: '>' | '>=' | '=' | '<=' | '<';
+  }[];
+}
+
+export interface UFOBattleStats {
+  maxHealth: number;
+  currentHealth: number;
+  energyPerTurn: number;
+  maxEnergy: number;
+  currentEnergy: number;
+  accuracy: number;
+  evasion: number;
+  criticalChance: number;
+  behaviorDeck: UFOBehaviorCard[];
+  threatLevel: number;
+}
+
 export interface UFOTypeDefinition {
   name: string;
   description: string;
@@ -160,6 +234,7 @@ export interface UFOTypeDefinition {
   crewRequirements?: UFOCrewRequirements;
   shape: UFOShape;
   color: UFOColor;
+  battleStats: UFOBattleStats;
 }
 
 export interface UFO {
@@ -186,6 +261,9 @@ export interface UFO {
   crewRequirements?: UFOCrewRequirements;
   shape: UFOShape;
   color: UFOColor;
+  battleStats?: UFOBattleStats;
+  activeBattleEffects?: BattleEffect[];
+  currentBehaviorCard?: UFOBehaviorCard;
 }
 
 export type UFOType = 
@@ -326,4 +404,79 @@ export interface ContinentSelection {
   continent: Continent;
   clickX: number; // SVG coordinate X where user clicked
   clickY: number; // SVG coordinate Y where user clicked
+}
+
+export interface BattleEffect {
+  id: string;
+  name: string;
+  type: 'buff' | 'debuff' | 'damage_over_time' | 'heal_over_time';
+  value: number;
+  duration: number;
+  source: string;
+  description: string;
+}
+
+export type BattleStage = 'approach' | 'engagement' | 'pursuit' | 'recovery' | 'aftermath';
+
+export interface BattleState {
+  id: string;
+  stage: BattleStage;
+  turn: number;
+  initiative: {
+    current: string;  // ID of current actor
+    order: string[];  // IDs in initiative order
+  };
+  playerEnergy: number;
+  enemyEnergy: number;
+  playerHand: BattleCard[];
+  playerDeck: BattleCard[];
+  playerDiscard: BattleCard[];
+  activeEffects: BattleEffect[];
+  vehicleStatus: VehicleBattleStats;
+  ufoStatus: UFOBattleStats;
+  stageObjectives: ObjectiveStatus[];
+  environmentalConditions: BattleCard[];
+  battleLog: BattleLogEntry[];
+}
+
+export interface ObjectiveStatus {
+  id: string;
+  type: 'primary' | 'secondary' | 'bonus';
+  description: string;
+  completed: boolean;
+  progress?: number;
+  maxProgress?: number;
+  rewards?: {
+    type: 'research' | 'funds' | 'equipment' | 'intel';
+    value: number;
+  }[];
+}
+
+export interface BattleLogEntry {
+  turn: number;
+  stage: BattleStage;
+  actorId: string;
+  actionType: 'card' | 'effect' | 'status' | 'objective';
+  description: string;
+  timestamp: Date;
+}
+
+export interface PersonnelBattleStats {
+  // Core battle capabilities
+  commandPoints: number;      // Special resource for crew abilities
+  maxCommandPoints: number;   // Maximum command points available
+  initiative: number;        // Affects card play order
+  
+  // Card-related stats
+  cardDrawBonus: number;     // Additional cards drawn per turn
+  energyGeneration: number;  // Extra energy provided to vehicle
+  
+  // Combat effectiveness
+  accuracyBonus: number;     // Improves vehicle's accuracy
+  criticalBonus: number;     // Improves critical hit chance
+  evasionBonus: number;      // Improves vehicle's evasion
+  
+  // Special abilities
+  specialtyBonus: number;    // Role-specific combat bonus
+  leadershipBonus: number;   // Affects whole crew performance
 }
