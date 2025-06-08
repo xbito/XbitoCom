@@ -15,7 +15,8 @@ export function checkRadarDetection(ufo: UFO, base: Base): boolean {
     ufo.location.y
   );
   
-  // Base detection range is 1000km, modified by radar level
+  // The detection range uses the base's configured radar range and is
+  // modified by the radar level
   const detectionRange = base.radarRange * (1 + radarBonus);
   
   if (distance > detectionRange) {
