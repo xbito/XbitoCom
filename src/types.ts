@@ -175,6 +175,7 @@ export interface Trajectory {
 export interface BattleCard {
   id: string;
   name: string;
+  description: string;
   type: CardType;
   cost: number;
   effects: CardEffect[];
