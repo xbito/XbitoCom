@@ -247,7 +247,7 @@ function App() {
     });
   }, [addTransaction]);
 
-  const handleAddFacility = useCallback((baseId: string, facilityType: string) => {
+  const handleAddFacility = useCallback((baseId: string, facilityType: keyof typeof FACILITY_TYPES) => {
     if (!FACILITY_TYPES[facilityType]) return;
 
     setGameState(prev => {
@@ -299,7 +299,7 @@ function App() {
         // Regular facility
         newFacility = {
           id: crypto.randomUUID(),
-          type: facilityType as any,
+          type: facilityType as Facility['type'],
           level: 1,
           personnel: [],
           powerUsage: facilityTypeData.basePowerUsage,

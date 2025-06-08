@@ -1,4 +1,4 @@
-import { Base, ResearchProject, GameState } from '../types'; // Added GameState
+import { Base, ResearchProject, GameState, Continent, ContinentSelection, Facility } from '../types';
 import { FACILITY_TYPES } from '../data/facilities';
 
 /**
@@ -83,8 +83,8 @@ export function calculatePowerStatus(base: Base) {
  * @param selected Continent or ContinentSelection object
  * @returns Continent object
  */
-export function getContinent(selected: any): any {
-  if (!selected) return {};
+export function getContinent(selected: Continent | ContinentSelection | null | undefined): Continent | null {
+  if (!selected) return null;
   return 'continent' in selected ? selected.continent : selected;
 }
 
@@ -93,9 +93,9 @@ export function getContinent(selected: any): any {
  * @param selectedContinent The selected continent
  * @returns Personnel multiplier value
  */
-export function getPersonnelMultiplier(selectedContinent: any) {
+export function getPersonnelMultiplier(selectedContinent: Continent | ContinentSelection | null | undefined): number {
   const continent = getContinent(selectedContinent);
-  return continent?.personnelMultiplier || 1;
+  return continent?.personnelMultiplier ?? 1;
 }
 
 /**
@@ -103,7 +103,7 @@ export function getPersonnelMultiplier(selectedContinent: any) {
  * @param selectedContinent The selected continent
  * @returns Initial personnel capacity value
  */
-export function getInitialPersonnelCapacity(selectedContinent: any) {
+export function getInitialPersonnelCapacity(selectedContinent: Continent | ContinentSelection | null | undefined): number {
   // Initial facilities include a level 1 barracks
   // Level 1 barracks provides 15 personnel housing capacity
   const baseCapacity = 15;
@@ -116,7 +116,7 @@ export function getInitialPersonnelCapacity(selectedContinent: any) {
  * @param facility The facility to calculate upgrade cost for
  * @returns The cost to upgrade the facility
  */
-export function calculateUpgradeCost(facility: any) {
+export function calculateUpgradeCost(facility: Facility) {
   if (!facility || !facility.type) {
     throw new Error('Invalid facility provided');
   }
