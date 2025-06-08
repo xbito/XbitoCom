@@ -81,7 +81,7 @@ export function getBaseVehicleType(variantKey: string): VehicleType {
 // Get a list of all variants for a specific vehicle type
 export function getVariantsByType(vehicleType: VehicleType): string[] {
   return Object.entries(VEHICLE_TYPES)
-    .filter(([_, variant]) => variant.type === vehicleType)
+    .filter(([, variant]) => variant.type === vehicleType)
     .map(([key]) => key);
 }
 

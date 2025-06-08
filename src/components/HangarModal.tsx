@@ -263,7 +263,7 @@ const HangarModal: React.FC<HangarModalProps> = ({
                 <div className="space-y-6">
                   {(['interceptor', 'transport', 'scout'] as VehicleType[]).map((type) => {
                     const variants = Object.entries(VEHICLE_TYPES)
-                      .filter(([_, variant]) => {
+                      .filter(([, variant]) => {
                         if (variant.type !== type) return false;
                         if (!variant.researchRequired) return true;
                         return variant.researchRequired.every(r => completedResearch.includes(r));
