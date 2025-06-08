@@ -7,26 +7,29 @@ interface ResourcePanelProps {
 }
 
 const ResourcePanel: React.FC<ResourcePanelProps> = ({ gameState }) => {
-  // Calculate total personnel (available + assigned)
+  // Calculate total personnel (available + assigned) without double counting
   const calculateTotalPersonnel = () => {
-    let total = gameState?.availablePersonnel?.length || 0;
-    
-    // Add personnel assigned to bases
+    const ids = new Set<string>();
+
+    // Available personnel not attached to any base yet
+    gameState?.availablePersonnel?.forEach(p => ids.add(p.id));
+
     gameState?.bases?.forEach(base => {
-      base.personnel.forEach(() => total++);
-      
-      // Add personnel assigned to facilities
+      // Personnel assigned directly to the base
+      base.personnel.forEach(p => ids.add(p.id));
+
+      // Personnel assigned to facilities
       base.facilities.forEach(facility => {
-        total += facility.personnel.length;
+        facility.personnel.forEach(p => ids.add(p.id));
       });
-      
-      // Add personnel assigned to vehicles
+
+      // Personnel assigned to vehicles
       base.vehicles.forEach(vehicle => {
-        total += vehicle.crew.length;
+        vehicle.crew.forEach(p => ids.add(p.id));
       });
     });
-    
-    return total;
+
+    return ids.size;
   };
   
   const availablePersonnel = gameState?.availablePersonnel?.length || 0;
