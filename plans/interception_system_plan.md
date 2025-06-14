@@ -357,10 +357,10 @@ Defensive Systems Branch:
   - [x] Define card type interfaces and core mechanics
   - [x] Create JSON data file with initial card set (20-30 base cards)
   - [x] Implement placeholder image references and naming conventions
-- [ ] Create card utility functions and validation
-  - [ ] Card deck management (shuffle, draw, discard)
-  - [ ] Card effect processing and validation
-  - [ ] Energy system and turn management utilities
+- [x] Create card utility functions and validation
+  - [x] Card deck management (shuffle, draw, discard)
+  - [x] Card effect processing and validation
+  - [x] Energy system and turn management utilities
 - [ ] Implement basic battle flow and stage progression
   - [ ] Multi-stage battle structure (Approach, Engagement, Pursuit)
   - [ ] Stage transition logic and objective tracking
