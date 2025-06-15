@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Base, Continent, UFO, ContinentSelection, ResearchProject } from '../types';
 import { CONTINENTS } from '../data/continents';
 import { doesTrajectoryIntersectRadar } from '../utils/trajectory';
@@ -35,8 +35,25 @@ const WorldMap: React.FC<WorldMapProps> = ({
   const animationFrameRef = useRef<number>();
   const lastTimeRef = useRef<number>(0);
 
-  // Animation loop
+  // Precompute star field once to avoid expensive regeneration on every render
+  const starField = useMemo(
+    () =>
+      Array.from({ length: 50 }).map(() => ({
+        x: Math.random() * 900,
+        y: Math.random() * 500,
+        r: Math.random() * 1.5,
+        opacity: Math.random() * 0.5 + 0.1,
+        animate: Math.random() < 0.5
+      })),
+    []
+  );
+
+  // Animation loop - only runs when there are UFOs to animate
   useEffect(() => {
+    if (activeUFOs.length === 0 && detectedUFOs.length === 0) return;
+
+    lastTimeRef.current = 0;
+
     const animate = (timestamp: number) => {
       if (!lastTimeRef.current) lastTimeRef.current = timestamp;
       const deltaTime = timestamp - lastTimeRef.current;
@@ -47,11 +64,16 @@ const WorldMap: React.FC<WorldMapProps> = ({
         if (!ufo.trajectory) return;
 
         // Calculate new position based on speed and time
-        const progress = ufo.trajectory.progress + (deltaTime / 1000) * (UFO_SPEED / 1000);
-        
+        const progress =
+          ufo.trajectory.progress + (deltaTime / 1000) * (UFO_SPEED / 1000);
+
         if (progress <= 1) {
-          const currentX = ufo.trajectory.start.x + (ufo.trajectory.end.x - ufo.trajectory.start.x) * progress;
-          const currentY = ufo.trajectory.start.y + (ufo.trajectory.end.y - ufo.trajectory.start.y) * progress;
+          const currentX =
+            ufo.trajectory.start.x +
+            (ufo.trajectory.end.x - ufo.trajectory.start.x) * progress;
+          const currentY =
+            ufo.trajectory.start.y +
+            (ufo.trajectory.end.y - ufo.trajectory.start.y) * progress;
 
           // Update UFO position
           ufo.trajectory.progress = progress;
@@ -69,7 +91,7 @@ const WorldMap: React.FC<WorldMapProps> = ({
         cancelAnimationFrame(animationFrameRef.current);
       }
     };
-  }, [activeUFOs, detectedUFOs, bases, showRadarCoverage]);
+  }, [activeUFOs, detectedUFOs]);
 
   const handleMapClick = (e: React.MouseEvent<SVGElement>) => {
     if (!onContinentSelect) return;
@@ -529,15 +551,15 @@ const WorldMap: React.FC<WorldMapProps> = ({
         })}
 
         {/* Distant stars/dots effect in the background */}
-        {Array.from({ length: 50 }).map((_, i) => (
+        {starField.map((star, i) => (
           <circle
             key={`star-${i}`}
-            cx={Math.random() * 900}
-            cy={Math.random() * 500}
-            r={Math.random() * 1.5}
+            cx={star.x}
+            cy={star.y}
+            r={star.r}
             fill="#ffffff"
-            opacity={Math.random() * 0.5 + 0.1}
-            className={i % 2 === 0 ? "animate-pulse" : ""}
+            opacity={star.opacity}
+            className={star.animate ? "animate-pulse" : ""}
           />
         ))}
       </svg>
