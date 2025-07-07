@@ -113,7 +113,7 @@ export const BUFF_CARDS: BattleCard[] = [
       createEffect('buff', 'self', '+30% dodge', 1),
       createEffect('buff', 'self', '+10 stealth', 1),
     ],
-    requirements: [createRequirement('skill', 'piloting', '>=50')], // My plan, existing was 'piloting:50'
+    requirements: [createRequirement('skill', 'piloting:50', '>=')], // Corrected to match expected format
     cooldown: 1,
     rarity: 'uncommon' as CardRarity,
     imageUrl: '/images/cards/evasive_maneuvers.png',
