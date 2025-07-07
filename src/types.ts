@@ -313,6 +313,9 @@ export interface GameState {
   showAllUFOTrajectories?: boolean;
   forceUFOSpawn?: boolean;
   debugPanelVisible?: boolean;
+  activeBattle?: BattleState | null;
+  selectedVehicleForBattle?: Vehicle | null;
+  selectedUFOForBattle?: UFO | null;
 }
 
 export interface Continent {
