@@ -12,9 +12,12 @@ import EventModal from './components/EventModal';
 import YearlyReviewModal from './components/YearlyReviewModal';
 import HangarModal from './components/HangarModal';
 import ConfirmationDialog from './components/ConfirmationDialog';
-import { GameState, Base, Personnel, ResearchProject, Transaction, UFO, ContinentSelection } from './types';
+import InterceptConfirmationModal from './components/InterceptConfirmationModal';
+import BattleScreen from './components/BattleScreen'; // Import the new BattleScreen component
+import { GameState, Base, Personnel, ResearchProject, Transaction, UFO, ContinentSelection, Vehicle, BattleState, BattleCard } from './types';
 import { FACILITY_TYPES, upgradeFacility } from './data/facilities';
 import { BASE_SALARIES } from './data/personnel';
+import { getStarterDeck, shuffleDeck, drawCards as drawCardsUtil } from './data/cards'; // Card utilities
 import { MONTHLY_EVENTS, GameEvent, evaluateYearlyPerformance, YearlyReview } from './data/events';
 import { hasCapacityForNewFacility, canAssignPersonnelToFacility } from './data/basePersonnel';
 import { doesTrajectoryIntersectRadar } from './utils/trajectory';
@@ -56,10 +59,13 @@ function App() {
         }
       ]
     },
-    showRadarCoverage: false
+    showRadarCoverage: false,
+    activeBattle: null,
+    selectedVehicleForBattle: null,
+    selectedUFOForBattle: null,
   });
 
-  type ModalType = 'intro' | 'base' | 'personnel' | 'research' | 'financial' | 'event' | 'yearlyReview' | 'hangar' | null;
+  type ModalType = 'intro' | 'base' | 'personnel' | 'research' | 'financial' | 'event' | 'yearlyReview' | 'hangar' | 'interceptConfirmation' | null;
   const [activeModal, setActiveModal] = useState<ModalType>('intro');
   const [selectedBase, setSelectedBase] = useState<Base | null>(null);
   const [selectedContinent, setSelectedContinent] = useState<ContinentSelection | null>(null);
@@ -67,6 +73,7 @@ function App() {
   const [yearlyReview, setYearlyReview] = useState<YearlyReview | null>(null);
   const [selectedHangarBase, setSelectedHangarBase] = useState<Base | null>(null);
   const [researchNotification, setResearchNotification] = useState<string | null>(null); // State for research start notification
+  const [targetUFO, setTargetUFO] = useState<UFO | null>(null); // UFO targeted for interception
 
   // State to track user actions during a turn
   const [actionsPerformed, setActionsPerformed] = useState<boolean>(false);
@@ -77,6 +84,160 @@ function App() {
 
   // Track transactions in the current turn
   const [currentTurnTransactions, setCurrentTurnTransactions] = useState<number>(0);
+
+
+  const handleInitiateBattle = useCallback((vehicle: Vehicle, ufo: UFO) => {
+    console.log(`Initiating battle between ${vehicle.name} and ${ufo.name}`);
+
+    const initialDeck = shuffleDeck(getStarterDeck());
+    const initialHandData = drawCardsUtil(initialDeck, [], [], 5); // Draw 5 cards initially
+
+    const initialBattleState: BattleState = {
+      id: crypto.randomUUID(),
+      stage: 'engagement', // Start directly in engagement for now
+      turn: 1,
+      initiative: { current: vehicle.id, order: [vehicle.id, ufo.id] }, // Placeholder
+      playerEnergy: vehicle.battleStats?.maxEnergy || 3, // Default to 3 energy
+      enemyEnergy: ufo.battleStats?.maxEnergy || 3, // Placeholder for UFO energy
+      playerHand: initialHandData.newHand,
+      playerDeck: initialHandData.newDeck,
+      playerDiscard: initialHandData.newDiscardPile,
+      activeEffects: [],
+      vehicleStatus: vehicle.battleStats || { // Use existing or provide default
+        maxHealth: 100, currentHealth: 100, energyPerTurn: 3, maxEnergy: 3, currentEnergy: 3,
+        accuracy: 75, evasion: 10, criticalChance: 5, cardSlots: 5, equipmentSlots: 2
+      },
+      ufoStatus: ufo.battleStats || { // Use existing or provide default
+        maxHealth: 50, currentHealth: 50, energyPerTurn: 3, maxEnergy: 3, currentEnergy: 3,
+        accuracy: 60, evasion: 5, criticalChance: 5, behaviorDeck: [], threatLevel: ufo.stealthRating // Placeholder
+      },
+      stageObjectives: [],
+      environmentalConditions: [],
+      battleLog: [],
+    };
+
+    setGameState(prev => ({
+      ...prev,
+      activeBattle: initialBattleState,
+      selectedVehicleForBattle: vehicle,
+      selectedUFOForBattle: ufo,
+    }));
+    // Typically, you'd hide other modals or UI elements here
+    setActiveModal(null);
+  }, []);
+
+  const handlePlayCard = useCallback((cardId: string) => {
+    setGameState(prev => {
+      if (!prev.activeBattle) return prev;
+
+      const card = prev.activeBattle.playerHand.find(c => c.id === cardId);
+      if (!card) {
+        console.error("Card not found in hand:", cardId);
+        return prev;
+      }
+
+      if (prev.activeBattle.playerEnergy < card.cost) {
+        alert("Not enough energy to play this card!");
+        // console.warn("Not enough energy for card:", card.name);
+        return prev;
+      }
+
+      console.log("Playing card:", card.name);
+      // TODO: Implement card effects
+      // For now, just remove from hand, add to discard, and deduct energy
+
+      const newHand = prev.activeBattle.playerHand.filter(c => c.id !== cardId);
+      const newDiscard = [...prev.activeBattle.playerDiscard, card];
+      const newPlayerEnergy = prev.activeBattle.playerEnergy - card.cost;
+
+      // Example: Simple damage effect for first card in effects array
+      let newUFOStatus = { ...prev.activeBattle.ufoStatus };
+      if (card.effects[0]?.type === 'damage' && typeof card.effects[0].value === 'string') {
+        // Basic damage range parsing (e.g., "25-35")
+        const parts = card.effects[0].value.split('-').map(Number);
+        const damage = parts.length === 2 ? Math.floor(Math.random() * (parts[1] - parts[0] + 1)) + parts[0] : parseInt(card.effects[0].value, 10) || 0;
+        newUFOStatus.currentHealth = Math.max(0, newUFOStatus.currentHealth - damage);
+        console.log(`${card.name} dealt ${damage} damage. UFO health: ${newUFOStatus.currentHealth}`);
+      } else if (card.effects[0]?.type === 'damage' && typeof card.effects[0].value === 'number') {
+        const damage = card.effects[0].value;
+         newUFOStatus.currentHealth = Math.max(0, newUFOStatus.currentHealth - damage);
+        console.log(`${card.name} dealt ${damage} damage. UFO health: ${newUFOStatus.currentHealth}`);
+      }
+
+
+      // Check for battle end
+      if (newUFOStatus.currentHealth <= 0) {
+        console.log("UFO Destroyed! Player wins!");
+        alert("UFO Destroyed! Player wins!");
+        // TODO: Handle victory rewards, cleanup, etc.
+        return { ...prev, activeBattle: null, selectedUFOForBattle: null, selectedVehicleForBattle: null };
+      }
+
+      return {
+        ...prev,
+        activeBattle: {
+          ...prev.activeBattle,
+          playerHand: newHand,
+          playerDiscard: newDiscard,
+          playerEnergy: newPlayerEnergy,
+          ufoStatus: newUFOStatus,
+          // battleLog: [...prev.activeBattle.battleLog, { turn: prev.activeBattle.turn, stage: prev.activeBattle.stage, actorId: 'player', actionType: 'card', description: `Played ${card.name}`, timestamp: new Date() }]
+        }
+      };
+    });
+  }, []);
+
+  const handleEndPlayerTurn = useCallback(() => {
+    setGameState(prev => {
+      if (!prev.activeBattle) return prev;
+      console.log("Player ends turn.");
+      // TODO: Implement UFO turn logic here
+      // For now, UFO does nothing, player gets energy and draws a card.
+
+      let newPlayerDeck = [...prev.activeBattle.playerDeck];
+      let newPlayerHand = [...prev.activeBattle.playerHand];
+      let newPlayerDiscard = [...prev.activeBattle.playerDiscard];
+
+      // Draw 1 card
+      const drawResult = drawCardsUtil(newPlayerDeck, newPlayerHand, newPlayerDiscard, 1);
+      newPlayerDeck = drawResult.newDeck;
+      newPlayerHand = drawResult.newHand;
+      newPlayerDiscard = drawResult.newDiscardPile;
+
+      // Replenish player energy (example: vehicle's energyPerTurn)
+      const playerMaxEnergy = prev.activeBattle.vehicleStatus.maxEnergy || 3;
+
+
+      // Placeholder UFO turn - simple attack
+      let newVehicleStatus = { ...prev.activeBattle.vehicleStatus };
+      const ufoAttackDamage = 10; // Placeholder
+      newVehicleStatus.currentHealth = Math.max(0, newVehicleStatus.currentHealth - ufoAttackDamage);
+      console.log(`UFO attacks for ${ufoAttackDamage} damage! Player health: ${newVehicleStatus.currentHealth}`);
+
+      if (newVehicleStatus.currentHealth <= 0) {
+        console.log("Player Vehicle Destroyed! UFO wins!");
+        alert("Player Vehicle Destroyed! UFO wins!");
+         // TODO: Handle defeat, cleanup, etc.
+        return { ...prev, activeBattle: null, selectedUFOForBattle: null, selectedVehicleForBattle: null };
+      }
+
+
+      return {
+        ...prev,
+        activeBattle: {
+          ...prev.activeBattle,
+          turn: prev.activeBattle.turn + 1,
+          playerEnergy: playerMaxEnergy, // Reset to max energy for simplicity
+          playerHand: newPlayerHand,
+          playerDeck: newPlayerDeck,
+          playerDiscard: newPlayerDiscard,
+          vehicleStatus: newVehicleStatus,
+          // battleLog: [...prev.activeBattle.battleLog, { turn: prev.activeBattle.turn, stage: prev.activeBattle.stage, actorId: 'player', actionType: 'status', description: `Ended turn.`, timestamp: new Date() }]
+        }
+      };
+    });
+  }, []);
+
 
   // Reset action tracking when a new turn starts
   const resetActionTracking = useCallback(() => {
@@ -777,7 +938,11 @@ function App() {
             showRadarCoverage={gameState.showRadarCoverage}
             activeUFOs={gameState.activeUFOs}
             detectedUFOs={gameState.detectedUFOs}
-            onUFOClick={() => {}} // We'll implement this later
+            onUFOClick={(ufo) => {
+              if (gameState.activeBattle) return; // Don't allow new interception if battle is active
+              setTargetUFO(ufo);
+              setActiveModal('interceptConfirmation');
+            }}
             showAllUFOTrajectories={gameState.showAllUFOTrajectories}
             completedResearch={gameState.completedResearch}
           />
@@ -883,6 +1048,25 @@ function App() {
         cancelText="Go Back"
       />
 
+      {activeModal === 'interceptConfirmation' && targetUFO && (
+        <InterceptConfirmationModal
+          isOpen={true}
+          onClose={() => {
+            setActiveModal(null);
+            setTargetUFO(null);
+          }}
+          onConfirm={(selectedVehicle) => {
+            if (targetUFO) {
+              handleInitiateBattle(selectedVehicle, targetUFO);
+            }
+            setActiveModal(null);
+            setTargetUFO(null);
+          }}
+          ufo={targetUFO}
+          availableVehicles={gameState.bases.flatMap(b => b.vehicles)} // Provide all vehicles from all bases
+        />
+      )}
+
       {/* Add debug panel */}
       <DebugPanel
         isVisible={gameState.debugPanelVisible ?? false}
@@ -891,6 +1075,15 @@ function App() {
         onToggleUFOPaths={handleToggleUFODebug}
         onToggleForceSpawn={handleToggleForceSpawn}
       />
+
+      {/* Render BattleScreen if a battle is active */}
+      {gameState.activeBattle && (
+        <BattleScreen
+          gameState={gameState}
+          onPlayCard={handlePlayCard}
+          onEndTurn={handleEndPlayerTurn}
+        />
+      )}
     </div>
   );
 }
