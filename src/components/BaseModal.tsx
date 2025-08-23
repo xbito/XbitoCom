@@ -40,46 +40,15 @@ const BaseModal: React.FC<BaseModalProps> = ({
   title,
   children
 }) => {
-  // If component is not open, don't render anything
-  if (!isOpen) return null;
-
-  // If this is being used as a generic modal with children
-  if (children) {
-    return (
-      <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
-        <div className={`bg-gradient-to-b from-slate-900 to-slate-950 rounded-lg p-6 border border-slate-700 shadow-lg ${
-          width === 'sm' ? 'w-[400px]' :
-          width === 'md' ? 'w-[600px]' :
-          width === 'lg' ? 'w-[800px]' :
-          width === 'xl' ? 'w-[1000px]' :
-          width === '2xl' ? 'w-[1200px]' :
-          'w-[600px]'
-        } max-h-[80vh] overflow-y-auto`}>
-          {title && (
-            <div className="flex justify-between items-center mb-6 border-b border-slate-700 pb-4">
-              <h2 className="text-2xl font-bold text-green-400">{title}</h2>
-              <button
-                onClick={onClose}
-                className="text-slate-400 hover:text-green-400 transition-colors"
-              >
-                <X size={24} />
-              </button>
-            </div>
-          )}
-          {children}
-        </div>
-      </div>
-    );
-  }
-
   // Base creation/management UI code
   const [name, setName] = useState(existingBase?.name || '');
   const [showFacilitySelect, setShowFacilitySelect] = useState(false);
   const [localFacilities, setLocalFacilities] = useState<Facility[]>(existingBase?.facilities || []);
-  const [powerStatus, setPowerStatus] = useState(() => 
+  const [powerStatus, setPowerStatus] = useState(() =>
     existingBase ? calculatePowerStatus(existingBase) : { generation: 0, usage: 0, surplus: 0 }
   );
   const [availableFacilities, setAvailableFacilities] = useState<typeof FACILITY_TYPES[keyof typeof FACILITY_TYPES][]>([]);
+
 
   // Keep state in sync with existingBase prop
   useEffect(() => {
@@ -126,6 +95,38 @@ const BaseModal: React.FC<BaseModalProps> = ({
       }
     }
   }, [localFacilities, existingBase, showFacilitySelect]);
+
+  // If component is not open, don't render anything
+  if (!isOpen) return null;
+
+  // If this is being used as a generic modal with children
+  if (children) {
+    return (
+      <div className="fixed inset-0 bg-black bg-opacity-70 flex items-center justify-center z-50">
+        <div className={`bg-gradient-to-b from-slate-900 to-slate-950 rounded-lg p-6 border border-slate-700 shadow-lg ${
+          width === 'sm' ? 'w-[400px]' :
+          width === 'md' ? 'w-[600px]' :
+          width === 'lg' ? 'w-[800px]' :
+          width === 'xl' ? 'w-[1000px]' :
+          width === '2xl' ? 'w-[1200px]' :
+          'w-[600px]'
+        } max-h-[80vh] overflow-y-auto`}>
+          {title && (
+            <div className="flex justify-between items-center mb-6 border-b border-slate-700 pb-4">
+              <h2 className="text-2xl font-bold text-green-400">{title}</h2>
+              <button
+                onClick={onClose}
+                className="text-slate-400 hover:text-green-400 transition-colors"
+              >
+                <X size={24} />
+              </button>
+            </div>
+          )}
+          {children}
+        </div>
+      </div>
+    );
+  }
 
   // Keep localFacilities in sync when upgrades happen
   const handleFacilityUpgrade = (baseId: string, facilityId: string) => {

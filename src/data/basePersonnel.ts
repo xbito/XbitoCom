@@ -177,7 +177,7 @@ export function calculateFacilityPersonnelCapacity(facility: Facility): number {
     case 'powerPlant':
     case 'radar':
     case 'defense':
-    case 'hangar':
+    case 'hangar': {
       // For other facilities, capacity depends on their basePersonnel value times level
       const facilityType = facility.type;
       // Assuming we have a constant for basePersonnel values
@@ -188,8 +188,9 @@ export function calculateFacilityPersonnelCapacity(facility: Facility): number {
         defense: 6,
         hangar: 5 // Changed from 8 to 5 as per requirements
       }[facilityType] || 3;
-      
+
       return baseCapacity * facility.level;
+    }
       
     default:
       return 0;
