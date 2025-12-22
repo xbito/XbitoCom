@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useMemo } from 'react';
 import { Globe2, DollarSign, Clock, ChevronRight, Info } from 'lucide-react';
 import WorldMap from './components/WorldMap';
 import ResourcePanel from './components/ResourcePanel';
@@ -20,6 +20,12 @@ import { hasCapacityForNewFacility, canAssignPersonnelToFacility } from './data/
 import { doesTrajectoryIntersectRadar } from './utils/trajectory';
 import { shouldSpawnUFO, generateUFO } from './data/ufos';
 import DebugPanel from './components/DebugPanel';
+import UFOContactModal from './components/UFOContactModal';
+import InterceptionReportModal from './components/InterceptionReportModal';
+import { applyInterceptionResolution, type InterceptionReport } from './game/ufoInterception';
+import { logError, logInfo } from './utils/logging';
+import InterceptionBattleModal from './components/InterceptionBattleModal';
+import type { BattleResult } from './game/battleV0';
 
 function App() {
   const [gameState, setGameState] = useState<GameState>({
@@ -67,6 +73,14 @@ function App() {
   const [yearlyReview, setYearlyReview] = useState<YearlyReview | null>(null);
   const [selectedHangarBase, setSelectedHangarBase] = useState<Base | null>(null);
   const [researchNotification, setResearchNotification] = useState<string | null>(null); // State for research start notification
+
+  const [ufoContactOpen, setUfoContactOpen] = useState<boolean>(false);
+  const [selectedUFOId, setSelectedUFOId] = useState<string | null>(null);
+  const [interceptionReport, setInterceptionReport] = useState<InterceptionReport | null>(null);
+  const [interceptionReportOpen, setInterceptionReportOpen] = useState<boolean>(false);
+
+  const [battleOpen, setBattleOpen] = useState<boolean>(false);
+  const [battleVehicleId, setBattleVehicleId] = useState<string | null>(null);
 
   // State to track user actions during a turn
   const [actionsPerformed, setActionsPerformed] = useState<boolean>(false);
@@ -121,6 +135,89 @@ function App() {
     setSelectedBase(null);
     setSelectedContinent(null);
   }, []);
+
+  const selectedUFO = useMemo(() => {
+    if (!selectedUFOId) return null;
+    return (
+      gameState.detectedUFOs.find(u => u.id === selectedUFOId) ||
+      gameState.activeUFOs.find(u => u.id === selectedUFOId) ||
+      null
+    );
+  }, [gameState.activeUFOs, gameState.detectedUFOs, selectedUFOId]);
+
+  const selectedBattleVehicle = useMemo(() => {
+    if (!battleVehicleId) return null;
+    for (const base of gameState.bases.slice(0, 50)) {
+      const found = base.vehicles.find(v => v.id === battleVehicleId);
+      if (found) return found;
+    }
+    return null;
+  }, [battleVehicleId, gameState.bases]);
+
+  const handleUFOClick = useCallback((ufo: UFO) => {
+    logInfo('UFO', 'UFO contact selected', {
+      ufoId: ufo.id,
+      status: ufo.status,
+      detectedBy: ufo.detectedBy
+    });
+    setSelectedUFOId(ufo.id);
+    setUfoContactOpen(true);
+  }, []);
+
+  const handleIntercept = useCallback((vehicleId: string) => {
+    if (!selectedUFOId) return;
+
+    logInfo('Intercept', 'Launching interception attempt', {
+      ufoId: selectedUFOId,
+      vehicleId
+    });
+
+    setBattleVehicleId(vehicleId);
+    setBattleOpen(true);
+    setUfoContactOpen(false);
+  }, [selectedUFOId]);
+
+  const handleBattleComplete = useCallback((result: BattleResult) => {
+    if (!selectedUFOId || !battleVehicleId) return;
+
+    logInfo('Battle', 'Battle completed', {
+      success: result.success,
+      endedBy: result.endedBy,
+      ufoId: selectedUFOId,
+      vehicleId: battleVehicleId,
+      vehicleDamage: result.vehicleDamage,
+      ufoDamage: result.ufoDamage
+    });
+
+    setGameState(prev => {
+      try {
+        const applied = applyInterceptionResolution(prev, {
+          ufoId: selectedUFOId,
+          vehicleId: battleVehicleId,
+          resolution: {
+            success: result.success,
+            message: result.message,
+            vehicleDamage: result.vehicleDamage,
+            ufoDamage: result.ufoDamage
+          }
+        });
+        setInterceptionReport(applied.report);
+        setInterceptionReportOpen(true);
+        return applied.nextState;
+      } catch (error) {
+        logError('Battle', 'Failed to apply battle outcome', {
+          error,
+          ufoId: selectedUFOId,
+          vehicleId: battleVehicleId,
+          result
+        });
+        return prev;
+      }
+    });
+
+    setBattleOpen(false);
+    setBattleVehicleId(null);
+  }, [battleVehicleId, selectedUFOId]);
 
   const addTransaction = useCallback((
     amount: number,
@@ -754,7 +851,7 @@ function App() {
             {/* Continue button with more subdued styling */}
             <button
               onClick={handleAdvanceTime}
-              disabled={!!activeModal}
+              disabled={!!activeModal || ufoContactOpen || interceptionReportOpen || battleOpen}
               className="bg-gradient-to-r from-blue-600/80 to-blue-700/80 hover:from-blue-600 hover:to-blue-700 
                         disabled:from-slate-700 disabled:to-slate-800 disabled:cursor-not-allowed 
                         text-white font-medium py-2 px-5 rounded-lg flex items-center justify-center gap-2
@@ -777,7 +874,7 @@ function App() {
             showRadarCoverage={gameState.showRadarCoverage}
             activeUFOs={gameState.activeUFOs}
             detectedUFOs={gameState.detectedUFOs}
-            onUFOClick={() => {}} // We'll implement this later
+            onUFOClick={handleUFOClick}
             showAllUFOTrajectories={gameState.showAllUFOTrajectories}
             completedResearch={gameState.completedResearch}
           />
@@ -871,6 +968,31 @@ function App() {
           completedResearch={gameState.completedResearch.map(r => r.id)}
         />
       )}
+
+      <UFOContactModal
+        isOpen={ufoContactOpen}
+        ufo={selectedUFO}
+        bases={gameState.bases}
+        onClose={() => setUfoContactOpen(false)}
+        onIntercept={handleIntercept}
+      />
+
+      <InterceptionBattleModal
+        isOpen={battleOpen}
+        vehicle={selectedBattleVehicle}
+        ufo={selectedUFO}
+        onClose={() => {
+          setBattleOpen(false);
+          setBattleVehicleId(null);
+        }}
+        onComplete={handleBattleComplete}
+      />
+
+      <InterceptionReportModal
+        isOpen={interceptionReportOpen}
+        report={interceptionReport}
+        onClose={() => setInterceptionReportOpen(false)}
+      />
       
       {/* No action confirmation dialog */}
       <ConfirmationDialog

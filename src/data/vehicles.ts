@@ -31,6 +31,10 @@ export const VEHICLE_TYPES: Record<string, {
       armor: 40,
       range: 60,
       capacity: 2,
+      firepower: 60,
+      energyGeneration: 3,
+      cardSlots: 2,
+      equipmentSlots: 1,
     },
     crewRequirements: {
       pilot: 1,
@@ -47,6 +51,10 @@ export const VEHICLE_TYPES: Record<string, {
       armor: 60,
       range: 80,
       capacity: 12,
+      firepower: 20,
+      energyGeneration: 2,
+      cardSlots: 1,
+      equipmentSlots: 2,
     },
     crewRequirements: {
       pilot: 2,
@@ -64,6 +72,10 @@ export const VEHICLE_TYPES: Record<string, {
       armor: 25,
       range: 70,
       capacity: 2,
+      firepower: 10,
+      energyGeneration: 2,
+      cardSlots: 1,
+      equipmentSlots: 1,
     },
     crewRequirements: {
       pilot: 1,
