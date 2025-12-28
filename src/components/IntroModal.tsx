@@ -5,11 +5,13 @@ import { CONTINENTS } from '../data/continents';
 
 interface IntroModalProps {
   onClose: () => void;
+  onQuickStartCreateBase?: (continentId: string) => void;
+  onBeginOperations?: () => void;
 }
 
 type PageType = 'crisis' | 'objectives' | 'locations';
 
-const IntroModal: React.FC<IntroModalProps> = ({ onClose }) => {
+const IntroModal: React.FC<IntroModalProps> = ({ onClose, onQuickStartCreateBase, onBeginOperations }) => {
   const [currentPage, setCurrentPage] = useState<PageType>('crisis');
 
   const handleNextPage = () => {
@@ -182,6 +184,13 @@ const IntroModal: React.FC<IntroModalProps> = ({ onClose }) => {
               <p className="mb-2 text-sm text-slate-400">
                 Each continent provides unique efficiency modifiers that affect your operations. These are percentage bonuses to effectiveness in different areas.
               </p>
+
+              <div className="bg-slate-900/60 border border-emerald-900/40 rounded p-3 mb-4">
+                <div className="text-sm text-slate-200 font-semibold">Quick Start (Recommended)</div>
+                <div className="text-xs text-slate-400 mt-1">
+                  Pick a continent and we’ll establish a starter base with radar + hangar + an interceptor so you can detect and respond to UFOs immediately.
+                </div>
+              </div>
               
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                 {Object.values(CONTINENTS).map((continent: Continent) => {
@@ -213,6 +222,19 @@ const IntroModal: React.FC<IntroModalProps> = ({ onClose }) => {
                         {continent.id === 'asia' && 'Largest base capacity with defensive bonus. Good for comprehensive operations.'}
                         {continent.id === 'oceania' && 'Research-focused with natural isolation. Good for secret projects.'}
                       </p>
+
+                      <div className="mt-3 flex items-center justify-between gap-2">
+                        <div className="text-[11px] text-slate-500">
+                          Starter base: Radar, Hangar, 1× Interceptor
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => onQuickStartCreateBase?.(continent.id)}
+                          className="bg-emerald-700/80 hover:bg-emerald-700 text-white text-sm px-3 py-1.5 rounded border border-emerald-500/30"
+                        >
+                          Create Base
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
@@ -234,12 +256,18 @@ const IntroModal: React.FC<IntroModalProps> = ({ onClose }) => {
               >
                 <ChevronLeft size={18} /> Back
               </button>
-              <button
-                onClick={onClose}
-                className="bg-gradient-to-r from-emerald-900 to-emerald-800 hover:from-emerald-800 hover:to-emerald-700 text-slate-200 font-medium py-2 px-4 rounded-sm flex items-center gap-2 shadow-md transition-all border-t border-emerald-700/50"
-              >
-                Begin Operations
-              </button>
+
+              <div className="group relative">
+                <button
+                  onClick={() => (onBeginOperations ? onBeginOperations() : onClose())}
+                  className="bg-gradient-to-r from-slate-800 to-slate-700 hover:from-slate-700 hover:to-slate-600 text-slate-200 font-medium py-2 px-4 rounded-sm flex items-center gap-2 shadow-md transition-all border-t border-slate-600/50"
+                >
+                  Begin Operations
+                </button>
+                <div className="pointer-events-none opacity-0 group-hover:opacity-100 transition-opacity absolute right-0 -top-12 bg-black/90 border border-slate-700 text-slate-200 text-xs rounded px-3 py-2 w-64">
+                  Advanced: start without a base and set everything up manually.
+                </div>
+              </div>
             </div>
           </>
         )}

@@ -26,6 +26,7 @@ import { applyInterceptionResolution, type InterceptionReport } from './game/ufo
 import { logError, logInfo } from './utils/logging';
 import InterceptionBattleModal from './components/InterceptionBattleModal';
 import type { BattleResult } from './game/battleV0';
+import { createQuickStartBase, QUICK_START_BASE_COST } from './game/quickStart';
 
 function App() {
   const [gameState, setGameState] = useState<GameState>({
@@ -892,7 +893,73 @@ function App() {
 
       {/* Modal rendering based on activeModal state */}
       {activeModal === 'intro' && (
-        <IntroModal onClose={() => setActiveModal(null)} />
+        <IntroModal
+          onClose={() => setActiveModal(null)}
+          onBeginOperations={() => setActiveModal(null)}
+          onQuickStartCreateBase={(continentId: string) => {
+            setGameState(prev => {
+              try {
+                if (prev.bases.length >= 10) {
+                  logError('QuickStart', 'Too many bases to quick-start', { baseCount: prev.bases.length, continentId });
+                  return prev;
+                }
+
+                if (prev.funds < QUICK_START_BASE_COST) {
+                  logError('QuickStart', 'Insufficient funds for quick-start base', {
+                    funds: prev.funds,
+                    required: QUICK_START_BASE_COST,
+                    continentId
+                  });
+                  return prev;
+                }
+
+                const base = createQuickStartBase(continentId);
+
+                logInfo('QuickStart', 'Created starter base', {
+                  baseId: base.id,
+                  baseName: base.name,
+                  continentId,
+                  facilities: base.facilities.map(f => f.type),
+                  vehicleCount: base.vehicles.length,
+                  radarRange: base.radarRange
+                });
+
+                return {
+                  ...prev,
+                  bases: [...prev.bases, base],
+                  funds: prev.funds - QUICK_START_BASE_COST,
+                  financials: {
+                    ...prev.financials,
+                    transactions: [
+                      ...prev.financials.transactions,
+                      {
+                        id: crypto.randomUUID(),
+                        date: new Date(),
+                        amount: QUICK_START_BASE_COST,
+                        type: 'expense',
+                        description: `Established starter base: ${base.name}`,
+                        category: 'facilities'
+                      }
+                    ]
+                  },
+                  showRadarCoverage: true
+                };
+              } catch (error) {
+                logError('QuickStart', 'Failed to create starter base', {
+                  error,
+                  continentId,
+                  funds: prev.funds,
+                  baseCount: prev.bases.length
+                });
+                return prev;
+              }
+            });
+
+            setActiveModal(null);
+            setSelectedContinent(null);
+            setSelectedBase(null);
+          }}
+        />
       )}
 
       {activeModal === 'base' && (
